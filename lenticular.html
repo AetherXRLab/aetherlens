@@ -1,0 +1,3850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Aetherlens · Lenticular Pattern Generator</title>
+<meta name="description" content="Aetherlens — generate ready-to-print interleaved patterns for LPI lenticular sheets. Supports 50/75 LPI, 2/3-flip, A4/A3 layout.">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Microsoft YaHei", sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f5f5f7;
+    color: #1d1d1f;
+    line-height: 1.5;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+
+  .hero {
+    margin: 0 0 22px;
+    padding: 4px 0;
+    text-align: center;
+  }
+  .hero img.brand-logo {
+    height: 84px;
+    width: auto;
+    display: inline-block;
+    max-width: 100%;
+    transform: translateX(-13pt);
+  }
+
+  .brand-h1 {
+    font-size: 30px;
+    margin: 0 0 6px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #1d1d1f;
+  }
+  .brand-h1 .accent {
+    background: linear-gradient(135deg, #0071e3 0%, #6e45e2 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sub { color: #6e6e73; margin-bottom: 20px; font-size: 14px; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid #d2d2d7;
+    margin-bottom: 24px;
+  }
+  .tab {
+    background: none;
+    border: 0;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #6e6e73;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: #1d1d1f; }
+  .tab.active { color: #0071e3; border-bottom-color: #0071e3; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  .card h3 { margin: 16px 0 8px; font-size: 14px; color: #6e6e73; font-weight: 600; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: #6e6e73; font-weight: 600; }
+  .field input, .field select {
+    padding: 8px 10px;
+    border: 1px solid #d2d2d7;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    font-family: inherit;
+    min-width: 0;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: #0071e3;
+  }
+  .row-pair {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: end;
+    gap: 8px;
+  }
+  .row-pair > span { padding-bottom: 8px; color: #6e6e73; }
+
+  .field input[type="color"] {
+    height: 38px;
+    width: 100%;
+    padding: 3px;
+    cursor: pointer;
+  }
+
+  .checkbox-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 14px;
+    padding: 4px 0;
+  }
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #1d1d1f;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .info-box {
+    background: #f5f5f7;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    color: #424245;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+  .info-box code { background: #e8e8ed; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .warn { color: #bf4f00; }
+  .ok { color: #1d7d3d; }
+
+  .image-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .slot {
+    border: 2px dashed #d2d2d7;
+    border-radius: 10px;
+    aspect-ratio: 86/54;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    background: #fafafa;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .slot:hover { border-color: #0071e3; background: #f0f7ff; }
+  .slot.has-image { border-style: solid; border-color: #0071e3; padding: 0; }
+  .slot.dragover { border-color: #0071e3; background: #e8f3ff; }
+  .slot img { width: 100%; height: 100%; object-fit: cover; }
+  .slot .placeholder {
+    text-align: center;
+    color: #6e6e73;
+    font-size: 13px;
+    padding: 8px;
+  }
+  .slot .placeholder strong { color: #1d1d1f; display: block; margin-bottom: 2px; font-size: 14px; }
+  .slot .remove {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+  }
+  .slot.has-image .remove { display: block; }
+
+  button.primary {
+    background: #0071e3;
+    color: white;
+    border: 0;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    font-family: inherit;
+  }
+  button.primary:hover:not(:disabled) { background: #005bb5; }
+  button.primary:disabled { background: #c7c7cc; cursor: not-allowed; }
+
+  button.secondary {
+    background: white;
+    color: #0071e3;
+    border: 1px solid #0071e3;
+    padding: 9px 19px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    font-family: inherit;
+  }
+  button.secondary:hover:not(:disabled) { background: #f0f7ff; }
+  button.secondary:disabled { color: #c7c7cc; border-color: #c7c7cc; cursor: not-allowed; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  .preview-wrap {
+    margin-top: 16px;
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    overflow: auto;
+    max-height: 600px;
+  }
+  .preview-wrap canvas {
+    max-width: 100%;
+    height: auto;
+    background-color: #fafafa;
+    background-image:
+      linear-gradient(45deg, #d0d0d0 25%, transparent 25%),
+      linear-gradient(-45deg, #d0d0d0 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #d0d0d0 75%),
+      linear-gradient(-45deg, transparent 75%, #d0d0d0 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, 8px 0;
+    box-shadow: 0 0 0 1px #d2d2d7;
+  }
+  .preview-wrap .empty { color: #6e6e73; padding: 40px; font-size: 13px; }
+
+  .progress {
+    height: 4px;
+    background: #e8e8ed;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 10px 0;
+    display: none;
+  }
+  .progress.active { display: block; }
+  .progress-bar {
+    height: 100%;
+    background: #0071e3;
+    width: 0%;
+    transition: width 0.1s;
+  }
+
+  .help-content { line-height: 1.7; color: #1d1d1f; }
+  .help-content h3 { margin: 20px 0 8px; }
+  .help-content ol, .help-content ul { padding-left: 22px; }
+  .help-content li { margin-bottom: 6px; }
+  .help-content code { background: #f5f5f7; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  .help-content table { border-collapse: collapse; margin: 8px 0; }
+  .help-content td, .help-content th {
+    border: 1px solid #d2d2d7;
+    padding: 6px 12px;
+    text-align: left;
+    font-size: 13px;
+  }
+  .help-content th { background: #f5f5f7; }
+
+  .tip {
+    background: #fff8e6;
+    border-left: 3px solid #ffb700;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin: 10px 0;
+    font-size: 13px;
+  }
+
+  .queue-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .queue-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: #fafafa;
+    border-radius: 8px;
+    border: 1px solid #ececec;
+  }
+  .queue-thumb {
+    width: 64px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    background-color: #fafafa;
+    background-image:
+      linear-gradient(45deg, #d8d8d8 25%, transparent 25%),
+      linear-gradient(-45deg, #d8d8d8 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #d8d8d8 75%),
+      linear-gradient(-45deg, transparent 75%, #d8d8d8 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, 4px 0;
+    flex-shrink: 0;
+  }
+  .queue-name {
+    flex: 1;
+    font-size: 13px;
+    color: #1d1d1f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .queue-count {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .queue-count input {
+    width: 56px;
+    text-align: center;
+    padding: 6px 4px;
+    border: 1px solid #d2d2d7;
+    border-radius: 4px;
+    font-size: 13px;
+    min-width: 0;
+  }
+  .qty-btn {
+    width: 28px; height: 28px;
+    border: 1px solid #d2d2d7;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    color: #1d1d1f;
+  }
+  .qty-btn:hover { background: #f0f7ff; border-color: #0071e3; color: #0071e3; }
+  .queue-remove {
+    width: 28px; height: 28px;
+    border: 0;
+    background: #ff3b30;
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .queue-remove:hover { background: #d70015; }
+  .preview-wrap canvas.clickable { cursor: pointer; }
+
+  .slot .edit-btn {
+    position: absolute;
+    top: 6px;
+    right: 34px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: 0;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+  }
+  .slot.has-image .edit-btn { display: block; }
+  .slot.has-image .edit-btn:hover { background: rgba(0,0,0,0.85); }
+  .slot canvas.thumb { width: 100%; height: 100%; display: block; }
+
+  .adjust-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .adjust-tab {
+    border: 1px solid #d2d2d7;
+    background: white;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #1d1d1f;
+    font-family: inherit;
+  }
+  .adjust-tab.active {
+    border-color: #0071e3;
+    background: #0071e3;
+    color: white;
+  }
+  .adjust-tab:hover:not(.active):not(.disabled) {
+    border-color: #0071e3;
+    background: #f0f7ff;
+  }
+  .adjust-tab.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #fafafa;
+  }
+  .adjust-tab .modified-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #ff9500;
+    display: inline-block;
+  }
+  .adjust-tab.active .modified-dot { background: white; }
+  .adjust-tab .tab-note {
+    font-size: 11px;
+    color: #6e6e73;
+    margin-left: 2px;
+  }
+  .adjust-tab.active .tab-note { color: rgba(255,255,255,0.8); }
+
+  .adjust-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .adjust-card {
+    border: 1px solid #d2d2d7;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    background: white;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  }
+  .adjust-card:hover {
+    border-color: #0071e3;
+    background: #f0f7ff;
+  }
+  .adjust-card:active { transform: scale(0.99); }
+  .adjust-card.empty {
+    border-style: dashed;
+    background: #fafafa;
+    cursor: default;
+    color: #6e6e73;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 130px;
+    font-size: 13px;
+  }
+  .adjust-card.empty:hover { border-color: #d2d2d7; background: #fafafa; }
+  .adjust-card-label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .adjust-card-label .edit-tag { color: #0071e3; font-weight: 500; font-size: 12px; }
+  .adjust-card .thumb {
+    width: 100%; height: auto; display: block;
+    border-radius: 6px;
+    background-color: #fafafa;
+    background-image:
+      linear-gradient(45deg, #e8e8e8 25%, transparent 25%),
+      linear-gradient(-45deg, #e8e8e8 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e8e8e8 75%),
+      linear-gradient(-45deg, transparent 75%, #e8e8e8 75%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, 6px 0;
+  }
+  .adjust-card-status {
+    font-size: 11px;
+    color: #6e6e73;
+    margin-top: 8px;
+    line-height: 1.4;
+  }
+  .adjust-card-status.modified { color: #0071e3; }
+
+  .editor-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .editor-overlay.active { display: flex; }
+  .editor-modal {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    width: 92%;
+    max-width: 920px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: auto;
+  }
+  .editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .editor-header strong { font-size: 16px; }
+  .editor-canvas-wrap {
+    background-color: #fafafa;
+    background-image:
+      linear-gradient(45deg, #d8d8d8 25%, transparent 25%),
+      linear-gradient(-45deg, #d8d8d8 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #d8d8d8 75%),
+      linear-gradient(-45deg, transparent 75%, #d8d8d8 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, 8px 0;
+    border: 1px solid #d2d2d7;
+    border-radius: 8px;
+    overflow: hidden;
+    user-select: none;
+    touch-action: none;
+  }
+  .editor-canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    cursor: grab;
+  }
+  .editor-canvas-wrap canvas:active { cursor: grabbing; }
+  .editor-help {
+    font-size: 12px;
+    color: #6e6e73;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .editor-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .editor-controls > button { padding: 6px 14px; font-size: 13px; }
+  .editor-controls .zoom-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 220px;
+  }
+  .editor-controls .zoom-row input[type="range"] { flex: 1; }
+  .editor-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    border-top: 1px solid #ececec;
+    padding-top: 12px;
+  }
+  .editor-close-x {
+    width: 32px; height: 32px;
+    border: 0; background: transparent;
+    font-size: 22px; cursor: pointer;
+    line-height: 1; color: #6e6e73;
+    border-radius: 50%;
+  }
+  .editor-close-x:hover { background: #f5f5f7; color: #1d1d1f; }
+
+  /* 语言切换 */
+  .lang-picker-overlay {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .lang-picker-overlay.active { display: flex; }
+  .lang-picker-card {
+    background: white; border-radius: 16px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    text-align: center;
+  }
+  .lang-picker-card h1 { margin: 0 0 8px; font-size: 22px; }
+  .lang-picker-card .sub { color: #6e6e73; font-size: 13px; margin-bottom: 24px; }
+  .lang-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+  }
+  .lang-list button {
+    padding: 14px 12px;
+    border: 1px solid #d2d2d7;
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 500;
+    color: #1d1d1f;
+    transition: all 0.15s;
+  }
+  .lang-list button:hover {
+    border-color: #0071e3;
+    background: #f0f7ff;
+    color: #0071e3;
+    transform: translateY(-1px);
+  }
+  .lang-switcher {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 100;
+  }
+  .lang-switcher select {
+    padding: 6px 28px 6px 12px;
+    border: 1px solid #d2d2d7;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+</style>
+</head>
+<body>
+
+<!-- 首次启动语言选择 -->
+<div id="lang-picker" class="lang-picker-overlay">
+  <div class="lang-picker-card">
+    <img src="logo.png" alt="Aetherlens" style="height:64px;width:auto;display:block;margin:0 auto 18px">
+    <h1 style="font-size:16px;margin:0 0 6px;font-weight:500">言語を選択 / Choose Your Language</h1>
+    <div class="sub">言語 / 언어 / Language / Langue / ภาษา / 中文</div>
+    <div class="lang-list">
+      <button data-lang="ja">日本語</button>
+      <button data-lang="ko">한국어</button>
+      <button data-lang="en">English</button>
+      <button data-lang="fr">Français</button>
+      <button data-lang="th">ไทย</button>
+      <button data-lang="zh-TW">繁體中文</button>
+      <button data-lang="zh-CN">简体中文</button>
+    </div>
+  </div>
+</div>
+
+<!-- 顶部语言切换 -->
+<div class="lang-switcher">
+  <select id="lang-switcher">
+    <option value="ja">日本語</option>
+    <option value="ko">한국어</option>
+    <option value="en">English</option>
+    <option value="fr">Français</option>
+    <option value="th">ไทย</option>
+    <option value="zh-TW">繁體中文</option>
+    <option value="zh-CN">简体中文</option>
+  </select>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <img src="logo.png" alt="Aetherlens" class="brand-logo">
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-panel="interlace" data-i18n="nav.interlace">① 交错图生成</button>
+    <button class="tab" data-panel="calibration" data-i18n="nav.calibration">② LPI 校准</button>
+    <button class="tab" data-panel="help" data-i18n="nav.help">使用说明</button>
+  </nav>
+
+  <!-- ============== 交错图生成 ============== -->
+  <section class="panel active" id="panel-interlace">
+    <div class="card">
+      <h2 data-i18n="s1.head">1. 参数设置</h2>
+      <div class="grid">
+        <div class="field">
+          <label data-i18n="s1.lpi">光栅 LPI（线/英寸）</label>
+          <select id="lpi">
+            <option value="50">50 LPI</option>
+            <option value="75" selected>75 LPI</option>
+            <option value="custom" data-i18n="common.custom">自定义...</option>
+          </select>
+        </div>
+        <div class="field" id="lpi-custom-wrap" style="display:none">
+          <label data-i18n="s1.lpiCustom">自定义 LPI</label>
+          <input type="number" id="lpi-custom" value="75" step="0.01" min="10" max="300">
+        </div>
+        <div class="field">
+          <label data-i18n="s1.dpi">打印 DPI</label>
+          <select id="dpi">
+            <option value="300">300 DPI</option>
+            <option value="600" selected>600 DPI</option>
+            <option value="1200">1200 DPI</option>
+          </select>
+        </div>
+        <div class="field">
+          <label data-i18n="s1.numImg">变换数</label>
+          <select id="num-images">
+            <option value="2" data-i18n="s1.var2">2 变（2 张图）</option>
+            <option value="3" selected data-i18n="s1.var3">3 变（3 张图）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label data-i18n="s1.size">底图尺寸 cm（宽 × 高）</label>
+          <div class="row-pair">
+            <input type="number" id="width-cm" value="8.6" step="0.1" min="1">
+            <span>×</span>
+            <input type="number" id="height-cm" value="5.4" step="0.1" min="1">
+          </div>
+        </div>
+        <div class="field">
+          <label data-i18n="s1.orient">光栅方向</label>
+          <select id="orientation">
+            <option value="vertical" data-i18n="s1.vert">竖向光栅（左右切换）</option>
+            <option value="horizontal" data-i18n="s1.horiz">横向光栅（上下切换）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label data-i18n="s1.bg">背景色（透明区域填色）</label>
+          <input type="color" id="bg-color" value="#ffffff">
+        </div>
+      </div>
+      <div class="checkbox-row">
+        <label class="checkbox-label">
+          <input type="checkbox" id="bg-transparent"> <span data-i18n="s1.transparent">保留透明（输出透明 PNG）</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="bleed-enabled"> <span data-i18n="s1.bleed">添加出血</span>
+        </label>
+      </div>
+      <div id="bleed-options" style="display:none;margin-top:12px;padding:12px 16px;background:#f5f5f7;border-radius:8px">
+        <div class="grid">
+          <div class="field">
+            <label data-i18n="s1.bleedW">出血宽度 (mm，每边)</label>
+            <input type="number" id="bleed-mm" value="3" step="0.5" min="0.5" max="20">
+          </div>
+        </div>
+        <div class="checkbox-row" style="margin-top:8px">
+          <label class="checkbox-label">
+            <input type="checkbox" id="cut-marks" checked> <span data-i18n="s1.cutMarks">添加裁切标记（4 角 L 形，剪切后会被去掉）</span>
+          </label>
+        </div>
+      </div>
+      <div class="info-box" id="calc-info"></div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="s2.head">2. 选择图片</h2>
+      <div style="font-size:13px;color:#6e6e73;margin-bottom:6px" data-i18n="s2.hint">
+        顺序很重要：左→右（或上→下）切换时，第 1 张最先看到。点击格子上传，或直接拖图进来。
+      </div>
+      <div class="image-slots" id="image-slots"></div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="s3.head">3. 调整图片大小、旋转、位置（可选）</h2>
+      <div style="font-size:13px;color:#6e6e73;margin-bottom:10px" data-i18n-html="s3.hint">
+        默认每张源图都"铺满"输出范围（中心裁剪）。点下面的标签切换要编辑哪张图；编辑器里可以叠加显示其他图作为对位参考。
+        <strong>修改是即时保存的</strong>，要回到默认点「铺满」即可。
+      </div>
+      <div class="adjust-tabs" id="adjust-tabs"></div>
+      <div id="adjust-empty-state" style="display:none;text-align:center;color:#6e6e73;padding:30px 12px;background:#fafafa;border:1px dashed #d2d2d7;border-radius:8px;font-size:13px" data-i18n="s3.empty">
+        请先在第 2 步上传图片，再回到这里调整
+      </div>
+      <div id="adjust-editor-content" style="display:none">
+        <div class="editor-canvas-wrap">
+          <canvas id="editor-canvas"></canvas>
+        </div>
+        <div class="editor-help" style="margin-top:8px" data-i18n-html="s3.editorHint">
+          整个画布 = <strong>输出范围</strong>。<strong>拖动</strong>移动位置 · <strong>滚轮</strong>缩放
+        </div>
+        <div class="editor-controls" id="editor-main-controls" style="margin-top:10px">
+          <button class="secondary" id="editor-rotate-l" data-i18n="ed.rotL">↺ 90°</button>
+          <button class="secondary" id="editor-rotate-r" data-i18n="ed.rotR">↻ 90°</button>
+          <div class="zoom-row">
+            <span style="font-size:12px;color:#6e6e73" data-i18n="ed.zoom">缩放</span>
+            <input type="range" id="editor-zoom" min="0.2" max="5" step="0.05" value="1">
+            <span id="editor-zoom-label" style="font-size:12px;color:#6e6e73;min-width:48px;text-align:right">100%</span>
+          </div>
+          <button class="secondary" id="editor-crop" data-i18n="ed.crop">✂ 裁切</button>
+          <button class="secondary" id="editor-reset" data-i18n="ed.fit">铺满</button>
+        </div>
+        <div class="editor-controls" id="editor-crop-controls" style="display:none;margin-top:10px;background:#fff8e6;border-radius:8px;padding:10px 12px">
+          <span style="font-size:12px;color:#8a6d3b;flex:1;line-height:1.4" data-i18n-html="crop.help">
+            <strong>裁切模式</strong>：拖动 4 角调大小 · 拖框内移动 · 框外区域会被丢弃
+          </span>
+          <button class="secondary" id="editor-crop-clear" data-i18n="crop.clear">清除裁切</button>
+          <button class="secondary" id="editor-crop-cancel" data-i18n="common.cancel">取消</button>
+          <button class="primary" id="editor-crop-apply" data-i18n="common.apply">应用</button>
+        </div>
+        <div class="editor-controls" id="editor-overlays-row" style="font-size:12px;display:none;margin-top:8px">
+          <span class="overlay-title" style="color:#6e6e73" data-i18n="ed.overlay">叠加对比：</span>
+          <div class="zoom-row" style="margin-left:auto">
+            <span style="color:#6e6e73" data-i18n="ed.opacity">透明度</span>
+            <input type="range" id="editor-overlay-opacity" min="0.1" max="0.95" step="0.05" value="0.5">
+            <span id="editor-overlay-opacity-label" style="color:#6e6e73;min-width:42px;text-align:right">50%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="s4.head">4. 生成与下载</h2>
+      <div class="actions">
+        <button class="primary" id="generate" data-i18n="s4.btn.gen">生成交错图</button>
+        <button class="secondary" id="download" disabled data-i18n="s4.btn.down">下载 PNG</button>
+        <button class="secondary" id="add-to-queue" disabled data-i18n="s4.btn.add" data-i18n-title="s4.btn.addTitle" title="把当前生成的单张存入拼版队列，可以再换图生成新的，最后一起拼版">+ 加入拼版队列</button>
+        <span style="font-size:13px;color:#6e6e73" id="status"></span>
+      </div>
+      <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="preview-wrap">
+        <canvas id="preview-canvas"></canvas>
+        <div class="empty" id="preview-empty" data-i18n="s4.previewEmpty">生成后会在这里预览</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="s5.head">5. 拼版到 A4 / A3（可选）</h2>
+      <div style="font-size:13px;color:#6e6e73;margin-bottom:10px" data-i18n-html="s5.hint">
+        先选纸张尺寸，再往下面的队列里添加图：可以从第 4 步「+ 加入拼版队列」，也可以从本机直接「+ 上传图片」加入已经做好的 PNG。<br>
+        加入新项时数量会自动按容量平均分配（铺满 → 对半 → 三等分 ...），之后可手动改数量留白。
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label data-i18n="s5.paperSize">纸张尺寸</label>
+          <select id="paper-size">
+            <option value="A4" selected>A4 (210 × 297 mm)</option>
+            <option value="A3">A3 (297 × 420 mm)</option>
+            <option value="A2">A2 (420 × 594 mm)</option>
+            <option value="custom" data-i18n="common.custom">自定义...</option>
+          </select>
+        </div>
+        <div class="field" id="paper-custom-wrap" style="display:none">
+          <label data-i18n="s5.paperCustom">自定义尺寸 mm（短边 × 长边）</label>
+          <div class="row-pair">
+            <input type="number" id="paper-w" value="210" step="1" min="50">
+            <span>×</span>
+            <input type="number" id="paper-h" value="297" step="1" min="50">
+          </div>
+        </div>
+        <div class="field">
+          <label data-i18n="s5.paperOrient">纸张方向</label>
+          <select id="paper-orient">
+            <option value="auto" selected data-i18n="s5.po.auto">自动（取最多）</option>
+            <option value="portrait" data-i18n="s5.po.portrait">纵向</option>
+            <option value="landscape" data-i18n="s5.po.landscape">横向</option>
+          </select>
+        </div>
+        <div class="field">
+          <label data-i18n="s5.paperMargin">纸张边距 (mm)</label>
+          <input type="number" id="paper-margin" value="5" step="0.5" min="0">
+        </div>
+        <div class="field">
+          <label data-i18n="s5.paperSpacing">张间距 (mm)</label>
+          <input type="number" id="paper-spacing" value="0" step="0.5" min="0">
+        </div>
+      </div>
+      <div style="margin-top:18px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+          <strong style="font-size:14px" data-i18n="s5.queueHead">拼版队列</strong>
+          <span id="queue-summary" style="font-size:13px;color:#6e6e73">(空)</span>
+          <button class="secondary" id="queue-upload" style="margin-left:auto;padding:6px 12px;font-size:12px" data-i18n="s5.queueUpload">+ 上传图片加入</button>
+          <button class="secondary" id="queue-clear" style="padding:6px 12px;font-size:12px;display:none" data-i18n="s5.queueClear">清空队列</button>
+        </div>
+        <div class="queue-list" id="queue-list"></div>
+        <div id="queue-empty-hint" style="font-size:12px;color:#6e6e73;padding:14px;background:#fafafa;border:1px dashed #d2d2d7;border-radius:6px;text-align:center" data-i18n-html="s5.queueEmptyHint">
+          队列为空。<br>
+          ① 在第 4 步生成单张后点「+ 加入拼版队列」<br>
+          ② 或直接点上面「+ 上传图片加入」选 PNG / JPG（支持多选、拖拽）
+        </div>
+      </div>
+      <div class="info-box" id="layout-info">设置好纸张后，下面添加图片到队列</div>
+      <div class="actions" style="margin-top:14px">
+        <button class="primary" id="layout-generate" disabled data-i18n="s5.btn.gen">生成排版图</button>
+        <button class="secondary" id="layout-download" disabled data-i18n="s5.btn.down">下载 PNG</button>
+      </div>
+      <div class="preview-wrap">
+        <canvas id="layout-canvas"></canvas>
+        <div class="empty" id="layout-empty" data-i18n="s5.layoutEmpty">生成后会在这里预览</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== LPI 校准 ============== -->
+  <section class="panel" id="panel-calibration">
+    <div class="card">
+      <h2 data-i18n="cal.head">LPI 校准测试图</h2>
+      <p style="font-size:14px;color:#424245" data-i18n-html="cal.intro">
+        实际光栅片的 LPI 通常和标称值有 ±0.3 ~ ±1.0 的偏差。打印这张测试图，把光栅片贴上去观察，
+        <strong>哪一行的灰色最均匀（没有彩色条纹/摩尔纹），那一行的数值就是你光栅片的真实 LPI</strong>，
+        把这个值填到"自定义 LPI"里再生成最终底图，立体效果会好得多。
+      </p>
+      <div class="grid">
+        <div class="field">
+          <label data-i18n="cal.center">中心 LPI</label>
+          <input type="number" id="cal-center" value="75" step="0.1">
+        </div>
+        <div class="field">
+          <label data-i18n="cal.step">步长（每行差）</label>
+          <input type="number" id="cal-step" value="0.2" step="0.05" min="0.05">
+        </div>
+        <div class="field">
+          <label data-i18n="cal.count">行数（奇数）</label>
+          <input type="number" id="cal-count" value="11" step="2" min="3" max="31">
+        </div>
+        <div class="field">
+          <label data-i18n="cal.dpi">打印 DPI</label>
+          <select id="cal-dpi">
+            <option value="300">300 DPI</option>
+            <option value="600" selected>600 DPI</option>
+            <option value="1200">1200 DPI</option>
+          </select>
+        </div>
+        <div class="field">
+          <label data-i18n="cal.size">尺寸 cm（宽 × 高）</label>
+          <div class="row-pair">
+            <input type="number" id="cal-w" value="8.6" step="0.1" min="1">
+            <span>×</span>
+            <input type="number" id="cal-h" value="5.4" step="0.1" min="1">
+          </div>
+        </div>
+        <div class="field">
+          <label data-i18n="cal.orient">光栅方向</label>
+          <select id="cal-orientation">
+            <option value="vertical" data-i18n="cal.vertCal">竖向（条纹竖直）</option>
+            <option value="horizontal" data-i18n="cal.horizCal">横向（条纹水平）</option>
+          </select>
+        </div>
+      </div>
+      <div class="info-box" id="cal-info"></div>
+      <div class="actions" style="margin-top:14px">
+        <button class="primary" id="cal-generate" data-i18n="cal.btn.gen">生成校准图</button>
+        <button class="secondary" id="cal-download" disabled data-i18n="cal.btn.down">下载 PNG</button>
+      </div>
+      <div class="preview-wrap">
+        <canvas id="cal-canvas"></canvas>
+        <div class="empty" id="cal-empty" data-i18n="cal.empty">生成后会在这里预览</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 使用说明 ============== -->
+  <section class="panel" id="panel-help">
+    <div class="card help-content">
+      <h2 data-i18n="nav.help">怎么用这个工具</h2>
+      <div data-i18n-html="help.body"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+//==============================================================
+// 工具函数
+//==============================================================
+const $ = id => document.getElementById(id);
+
+//==============================================================
+// 多语言（i18n）
+//==============================================================
+const translations = {
+  'zh-CN': {
+    'app.title': '光栅片打印底图生成器',
+    'app.subtitle': '为 LPI 光栅片（立体画 / 二变三变）生成可直接打印的交错底图',
+    'nav.interlace': '① 交错图生成',
+    'nav.calibration': '② LPI 校准',
+    'nav.help': '使用说明',
+    'common.custom': '自定义...',
+    'common.cancel': '取消',
+    'common.apply': '应用',
+    'common.confirm': '确认',
+    's1.head': '1. 参数设置',
+    's1.lpi': '光栅 LPI（线/英寸）',
+    's1.lpiCustom': '自定义 LPI',
+    's1.dpi': '打印 DPI',
+    's1.numImg': '变换数',
+    's1.var2': '2 变（2 张图）',
+    's1.var3': '3 变（3 张图）',
+    's1.size': '底图尺寸 cm（宽 × 高）',
+    's1.orient': '光栅方向',
+    's1.vert': '竖向光栅（左右切换）',
+    's1.horiz': '横向光栅（上下切换）',
+    's1.bg': '背景色（透明区域填色）',
+    's1.transparent': '保留透明（输出透明 PNG）',
+    's1.bleed': '添加出血',
+    's1.bleedW': '出血宽度 (mm，每边)',
+    's1.cutMarks': '添加裁切标记（4 角 L 形，剪切后会被去掉）',
+    's2.head': '2. 选择图片',
+    's2.hint': '顺序很重要：左→右（或上→下）切换时，第 1 张最先看到。点击格子上传，或直接拖图进来。',
+    's2.lab.left': '第 1 张（左视角）',
+    's2.lab.right': '第 2 张（右视角）',
+    's2.lab.start': '第 1 张（左/起始）',
+    's2.lab.middle': '第 2 张（中间）',
+    's2.lab.end': '第 3 张（右/末尾）',
+    's2.tap': '点击或拖入图片',
+    's3.head': '3. 调整图片大小、旋转、位置（可选）',
+    's3.hint': '默认每张源图都"铺满"输出范围（中心裁剪）。点下面的标签切换要编辑哪张图；编辑器里可以叠加显示其他图作为对位参考。<strong>修改是即时保存的</strong>，要回到默认点「铺满」即可。',
+    's3.empty': '请先在第 2 步上传图片，再回到这里调整',
+    's3.tab': '第 {0} 张',
+    's3.notUploaded': '未上传',
+    's3.editorHint': '整个画布 = <strong>输出范围</strong>。<strong>拖动</strong>移动位置 · <strong>滚轮</strong>缩放',
+    'ed.rotL': '↺ 90°',
+    'ed.rotR': '↻ 90°',
+    'ed.zoom': '缩放',
+    'ed.fit': '铺满',
+    'ed.crop': '✂ 裁切',
+    'ed.overlay': '叠加对比：',
+    'ed.opacity': '透明度',
+    'crop.help': '<strong>裁切模式</strong>：拖动 4 角调大小 · 拖框内移动 · 框外区域会被丢弃',
+    'crop.clear': '清除裁切',
+    's4.head': '4. 生成与下载',
+    's4.btn.gen': '生成交错图',
+    's4.btn.down': '下载 PNG',
+    's4.btn.add': '+ 加入拼版队列',
+    's4.btn.addTitle': '把当前生成的单张存入拼版队列，可以再换图生成新的，最后一起拼版',
+    's4.statusGen': '✓ 已生成',
+    's4.statusProc': '处理中...',
+    's4.previewEmpty': '生成后会在这里预览',
+    's5.head': '5. 拼版到 A4 / A3（可选）',
+    's5.hint': '先选纸张尺寸，再往下面的队列里添加图：可以从第 4 步「+ 加入拼版队列」，也可以从本机直接「+ 上传图片」加入已经做好的 PNG。<br>加入新项时数量会自动按容量平均分配（铺满 → 对半 → 三等分 ...），之后可手动改数量留白。',
+    's5.paperSize': '纸张尺寸',
+    's5.paperOrient': '纸张方向',
+    's5.po.auto': '自动（取最多）',
+    's5.po.portrait': '纵向',
+    's5.po.landscape': '横向',
+    's5.paperMargin': '纸张边距 (mm)',
+    's5.paperSpacing': '张间距 (mm)',
+    's5.paperCustom': '自定义尺寸 mm（短边 × 长边）',
+    's5.queueHead': '拼版队列',
+    's5.queueEmpty': '(空)',
+    's5.queueSummary': '({0} 种 · 共 {1} 张)',
+    's5.queueUpload': '+ 上传图片加入',
+    's5.queueClear': '清空队列',
+    's5.queueEmptyHint': '队列为空。<br>① 在第 4 步生成单张后点「+ 加入拼版队列」<br>② 或直接点上面「+ 上传图片加入」选 PNG / JPG（支持多选、拖拽）',
+    's5.btn.gen': '生成排版图',
+    's5.btn.down': '下载 PNG',
+    's5.layoutEmpty': '生成后会在这里预览',
+    's5.unitName.from3': '{0}×{1}cm · {2}LPI · {3}变',
+    's5.unitName.upload': '上传 · {0} · {1}×{2}px',
+    's5.itemPrefix': '第 {0} 组',
+    'cal.head': 'LPI 校准测试图',
+    'cal.intro': '实际光栅片的 LPI 通常和标称值有 ±0.3 ~ ±1.0 的偏差。打印这张测试图，把光栅片贴上去观察，<strong>哪一行的灰色最均匀（没有彩色条纹/摩尔纹），那一行的数值就是你光栅片的真实 LPI</strong>，把这个值填到"自定义 LPI"里再生成最终底图，立体效果会好得多。',
+    'cal.center': '中心 LPI',
+    'cal.step': '步长（每行差）',
+    'cal.count': '行数（奇数）',
+    'cal.dpi': '打印 DPI',
+    'cal.size': '尺寸 cm（宽 × 高）',
+    'cal.orient': '光栅方向',
+    'cal.vertCal': '竖向（条纹竖直）',
+    'cal.horizCal': '横向（条纹水平）',
+    'cal.btn.gen': '生成校准图',
+    'cal.btn.down': '下载 PNG',
+    'cal.empty': '生成后会在这里预览',
+    'al.uploadFirst': '请先上传第 {0} 张图片',
+    'al.notImage': '选中的文件不是图片',
+    'al.fileLoadFail': '下列文件加载失败：\n{0}',
+    'al.genFirst': '请先在第 4 步生成至少一张',
+    'al.sizeMismatch': '队列里有不同尺寸的单张，无法拼到同一张大纸',
+    'al.noPiece': '没有可拼的单张',
+    'al.tooBig': '画布像素 {0} × {1} 超过浏览器上限。\n请把第 1 步的 DPI 降到 600 或 1200，重新生成后再排版。',
+    'al.layoutFail': '生成失败：{0}\n\n通常原因：DPI 过高导致画布超过浏览器上限。请把第 1 步 DPI 改成 600 或 1200 重试。',
+    'al.clearQueue': '清空整个队列？',
+    'al.toBlobNull': 'toBlob 返回 null（画布过大）',
+    'al.canvasLimited': '浏览器画布尺寸被限制（实际 {0} × {1}），DPI 太高了',
+    'in.outSize': '输出尺寸：<code>{0} × {1}</code> 像素 · 物理 {2} × {3} cm @ {4} DPI',
+    'in.cutSize': '切口尺寸：<code>{0} × {1}</code> 像素 · {2} × {3} cm',
+    'in.bleedOut': '<strong>含出血输出</strong>：<code>{0} × {1}</code> 像素 · {2} × {3} cm（每边出血 {4} mm）@ {5} DPI',
+    'in.lensDetail': '每个光栅周期：<code>{0}</code> 像素 · 每张图条带宽：<code>{1}</code> 像素 · 光栅总数：<code>{2}</code>',
+    'in.warnStrip': '⚠ 每张图分到的条带不到 2 像素，效果会很糊。建议提高 DPI 或降低变换数。',
+    'in.warnNonInt': '提示：DPI/LPI = <code>{0}</code> 不是整数，会按浮点精确切片（属正常）。如想取整，可让 DPI 是 LPI 的整数倍（如 {1} DPI）。',
+    'in.calRange': '范围：<code>{0} ~ {1} LPI</code>，每行差 <code>{2}</code>，共 <code>{3}</code> 行<br>输出 <code>{4} × {5}</code> 像素 · {6} × {7} cm @ {8} DPI',
+    'in.layoutNoQueue': '下面添加图到队列（在第 4 步生成单张「+ 加入拼版队列」、或点「+ 上传图片加入」从本机选 PNG / JPG）',
+    'in.layoutMismatch': '⚠ 队列中存在不同像素尺寸的单张（不同 DPI / 出血 / 物理尺寸），无法拼到同一张大纸。请删除尺寸不一致的项。',
+    'in.layoutNoFit': '⚠ 当前纸张和边距下放不下任何一张，请调小边距或换更大的纸',
+    'in.layoutCapacity': '纸张容量 <strong>{0} × {1} = {2}</strong> 张（{3}）· 像素 <code>{4} × {5}</code> @ {6} DPI · 内存 {7} MB',
+    'in.queueZero': '⚠ 队列里所有项数量都是 0，请加上数量或删除。',
+    'in.queueOver': '⚠ 队列要拼 {0} 张，但纸张只能放 {1} 张，多余 {2} 张不会被排上。',
+    'in.queueUnder': '队列 {0} 张 < 纸张容量 {1}，剩余位置会留空。',
+    'in.queueExact': '队列 {0} 张 = 纸张容量 {1}，刚好铺满。',
+    'in.singleMode': '单张模式：用第 4 步当前生成的图填满 {0} 个位置。',
+    'in.tooBig': '⚠ 像素超过浏览器画布上限（单边 {0} / 总面积 2.68 亿）。请把第 1 步 DPI 降到 <strong>{1} 或更低</strong>，重新生成后再排版。',
+    'in.heavy': '⚠ 内存约 {0} MB，生成会很慢。建议第 1 步 600~1200 DPI。',
+    'in.orient.portrait': '纵向',
+    'in.orient.landscape': '横向',
+    'qi.delete': '从队列删除这一种',
+    'tt.editTabRemove': '已调整',
+    'tt.layoutClickRemove': '点击某一张可从队列中移除一份',
+    'help.body': `
+      <h3>第一步：先做 LPI 校准（强烈建议）</h3>
+      <ol>
+        <li>切到「LPI 校准」标签页，根据光栅片标称值设置中心 LPI（你的两种是 50 和 75）</li>
+        <li>点击"生成校准图"，下载 PNG</li>
+        <li>用打印机按 <strong>实际尺寸</strong> 打印（关键：不要"适应页面"，要选"实际大小"或"100%"）</li>
+        <li>把光栅片对齐贴在打印好的纸上，肉眼观察。光栅条纹要和测试条纹平行</li>
+        <li>来回轻微转动观察，找到那一行——它的灰色最干净，没有彩虹/波浪条纹</li>
+        <li>记下那一行旁边写的 LPI 数值（比如 49.8 或 75.2）</li>
+      </ol>
+      <h3>第二步：生成交错图</h3>
+      <ol>
+        <li>回到「交错图生成」标签</li>
+        <li>LPI 选"自定义"，填上一步测出来的精确值（如果懒得校准就直接选 50 或 75）</li>
+        <li>DPI 选你打印机的实际打印精度。家用喷墨一般 600，激光 600 或 1200，照片打印机可到 1440 / 2400</li>
+        <li>变换数选 2 或 3。<strong>3 变效果更平滑，但每张图分辨率会少 1/3，需要素材清晰</strong></li>
+        <li>底图尺寸：你的光栅片是 8.6 × 5.4 cm，已是默认值</li>
+        <li>光栅方向：你拿着光栅片，看光栅条纹是竖直的就选"竖向"，水平的就选"横向"。<strong>不确定就两种都生成一次试试</strong></li>
+        <li>上传 2 / 3 张图。顺序：从某个角度开始向另一边转动时看到的顺序。比如 3 变是「左视角图 / 正面图 / 右视角图」</li>
+        <li>点击"生成交错图"，下载 PNG</li>
+      </ol>
+      <h3>第三步：打印</h3>
+      <div class="tip"><strong>关键：打印时一定要按"实际尺寸/100%/无缩放"，不能选"适应页面"。</strong>否则尺寸会偏移几个像素，每条光栅都对不齐，立体效果就废了。</div>
+      <ul>
+        <li>导出的 PNG 已带 DPI 元数据，多数软件（Photoshop、Acrobat、IrfanView）会自动按真实尺寸排版</li>
+        <li>打印机要选最高质量 / 照片模式</li>
+        <li>纸推荐：相纸或厚一点的喷墨纸，普通纸墨水会扩散导致条纹模糊</li>
+        <li>打印完先量一下尺寸，必须正好 8.6 × 5.4 cm，差几毫米就要重打</li>
+      </ul>
+      <h3>第四步：贴合</h3>
+      <ol>
+        <li>把打印纸裁到和光栅片一样大</li>
+        <li>光栅片光滑面朝外（凸出有条纹的那面朝外），平面朝向打印图</li>
+        <li>对齐角落，用极少量胶水或双面胶固定（别让胶水跑到中间）</li>
+        <li>从不同角度看，应该能看到图像切换</li>
+      </ol>
+      <h3>素材怎么准备</h3>
+      <ul>
+        <li><strong>2 变（左右切换两张图）</strong>：随便两张相关或对比的图。比如人物的两个表情、白天黑夜、变身前后</li>
+        <li><strong>3 变（3 张图依次切换）</strong>：连续动作的 3 帧，或同一物体的左/正/右三个视角（这就是基础的"立体"）</li>
+        <li>所有图建议宽高比接近 8.6:5.4 ≈ 16:10，不一致会被裁切（中心保留）</li>
+        <li>分辨率越高越好，至少和最终输出像素相当</li>
+      </ul>
+      <h3>常见问题</h3>
+      <ul>
+        <li><strong>看到一片虹彩条纹</strong>：LPI 没对准。回去做校准</li>
+        <li><strong>图像有重影</strong>：光栅方向选错了，或贴合时旋转了一点角度</li>
+        <li><strong>切换不干脆，能看到中间过渡</strong>：正常现象，光栅片本身就有过渡区</li>
+        <li><strong>颜色发灰发暗</strong>：每张原图的颜色饱和度可以调高一点再用</li>
+        <li><strong>3 变中间那张看不清</strong>：可能是观察角度不对，或者光栅片本身就只支持 2 变</li>
+      </ul>
+      <h3>关于宽高比和尺寸</h3>
+      <p>你买的光栅片是 8.6 × 5.4 cm。如果打印纸更大想多放几个，可以这样：用图片处理软件把生成的 PNG 排版到 A4，每张占 8.6 × 5.4，<strong>排版时不能缩放</strong>。</p>
+    `,
+  },
+  'zh-TW': {
+    'app.title': '光柵片列印底圖產生器',
+    'app.subtitle': '為 LPI 光柵片（立體畫 / 二變三變）產生可直接列印的交錯底圖',
+    'nav.interlace': '① 交錯圖產生',
+    'nav.calibration': '② LPI 校準',
+    'nav.help': '使用說明',
+    'common.custom': '自訂...',
+    'common.cancel': '取消',
+    'common.apply': '套用',
+    'common.confirm': '確認',
+    's1.head': '1. 參數設定',
+    's1.lpi': '光柵 LPI（線/英吋）',
+    's1.lpiCustom': '自訂 LPI',
+    's1.dpi': '列印 DPI',
+    's1.numImg': '變換數',
+    's1.var2': '2 變（2 張圖）',
+    's1.var3': '3 變（3 張圖）',
+    's1.size': '底圖尺寸 cm（寬 × 高）',
+    's1.orient': '光柵方向',
+    's1.vert': '直向光柵（左右切換）',
+    's1.horiz': '橫向光柵（上下切換）',
+    's1.bg': '背景色（透明區域填色）',
+    's1.transparent': '保留透明（輸出透明 PNG）',
+    's1.bleed': '加入出血',
+    's1.bleedW': '出血寬度 (mm，每邊)',
+    's1.cutMarks': '加入裁切標記（4 角 L 形，裁切後會被去除）',
+    's2.head': '2. 選擇圖片',
+    's2.hint': '順序很重要：左→右（或上→下）切換時，第 1 張最先看到。點擊格子上傳，或直接拖圖進來。',
+    's2.lab.left': '第 1 張（左視角）',
+    's2.lab.right': '第 2 張（右視角）',
+    's2.lab.start': '第 1 張（左/起始）',
+    's2.lab.middle': '第 2 張（中間）',
+    's2.lab.end': '第 3 張（右/末尾）',
+    's2.tap': '點擊或拖入圖片',
+    's3.head': '3. 調整圖片大小、旋轉、位置（可選）',
+    's3.hint': '預設每張原圖都「鋪滿」輸出範圍（中心裁切）。點下面的標籤切換要編輯哪張圖；編輯器內可以疊加顯示其他圖作為對位參考。<strong>修改即時儲存</strong>，要回到預設點「鋪滿」即可。',
+    's3.empty': '請先在第 2 步上傳圖片，再回來這裡調整',
+    's3.tab': '第 {0} 張',
+    's3.notUploaded': '未上傳',
+    's3.editorHint': '整個畫布 = <strong>輸出範圍</strong>。<strong>拖動</strong>移動位置 · <strong>滾輪</strong>縮放',
+    'ed.rotL': '↺ 90°',
+    'ed.rotR': '↻ 90°',
+    'ed.zoom': '縮放',
+    'ed.fit': '鋪滿',
+    'ed.crop': '✂ 裁切',
+    'ed.overlay': '疊加對比：',
+    'ed.opacity': '透明度',
+    'crop.help': '<strong>裁切模式</strong>：拖動 4 角調大小 · 拖框內移動 · 框外區域會被丟棄',
+    'crop.clear': '清除裁切',
+    's4.head': '4. 產生與下載',
+    's4.btn.gen': '產生交錯圖',
+    's4.btn.down': '下載 PNG',
+    's4.btn.add': '+ 加入拼版佇列',
+    's4.btn.addTitle': '把目前產生的單張存入拼版佇列，可以再換圖產生新的，最後一起拼版',
+    's4.statusGen': '✓ 已產生',
+    's4.statusProc': '處理中...',
+    's4.previewEmpty': '產生後會在這裡預覽',
+    's5.head': '5. 拼版到 A4 / A3（可選）',
+    's5.hint': '先選紙張尺寸，再往下面的佇列加圖：可以從第 4 步「+ 加入拼版佇列」，也可以從本機直接「+ 上傳圖片」加入已做好的 PNG。<br>加入新項時數量會自動按容量平均分配（鋪滿 → 對半 → 三等分 ...），之後可手動改數量留白。',
+    's5.paperSize': '紙張尺寸',
+    's5.paperOrient': '紙張方向',
+    's5.po.auto': '自動（取最多）',
+    's5.po.portrait': '直向',
+    's5.po.landscape': '橫向',
+    's5.paperMargin': '紙張邊距 (mm)',
+    's5.paperSpacing': '張間距 (mm)',
+    's5.paperCustom': '自訂尺寸 mm（短邊 × 長邊）',
+    's5.queueHead': '拼版佇列',
+    's5.queueEmpty': '(空)',
+    's5.queueSummary': '({0} 種 · 共 {1} 張)',
+    's5.queueUpload': '+ 上傳圖片加入',
+    's5.queueClear': '清空佇列',
+    's5.queueEmptyHint': '佇列為空。<br>① 在第 4 步產生單張後點「+ 加入拼版佇列」<br>② 或直接點上面「+ 上傳圖片加入」選 PNG / JPG（支援多選、拖曳）',
+    's5.btn.gen': '產生拼版圖',
+    's5.btn.down': '下載 PNG',
+    's5.layoutEmpty': '產生後會在這裡預覽',
+    's5.unitName.from3': '{0}×{1}cm · {2}LPI · {3}變',
+    's5.unitName.upload': '上傳 · {0} · {1}×{2}px',
+    's5.itemPrefix': '第 {0} 組',
+    'cal.head': 'LPI 校準測試圖',
+    'cal.intro': '實際光柵片的 LPI 通常和標稱值有 ±0.3 ~ ±1.0 的偏差。列印這張測試圖，把光柵片貼上去觀察，<strong>哪一列的灰色最均勻（沒有彩色條紋/摩爾紋），那一列的數值就是你光柵片的真實 LPI</strong>，把這個值填到「自訂 LPI」再產生最終底圖，立體效果會好得多。',
+    'cal.center': '中心 LPI',
+    'cal.step': '步長（每列差）',
+    'cal.count': '列數（奇數）',
+    'cal.dpi': '列印 DPI',
+    'cal.size': '尺寸 cm（寬 × 高）',
+    'cal.orient': '光柵方向',
+    'cal.vertCal': '直向（條紋直立）',
+    'cal.horizCal': '橫向（條紋水平）',
+    'cal.btn.gen': '產生校準圖',
+    'cal.btn.down': '下載 PNG',
+    'cal.empty': '產生後會在這裡預覽',
+    'al.uploadFirst': '請先上傳第 {0} 張圖片',
+    'al.notImage': '選中的檔案不是圖片',
+    'al.fileLoadFail': '下列檔案載入失敗：\n{0}',
+    'al.genFirst': '請先在第 4 步產生至少一張',
+    'al.sizeMismatch': '佇列裡有不同尺寸的單張，無法拼到同一張大紙',
+    'al.noPiece': '沒有可拼的單張',
+    'al.tooBig': '畫布像素 {0} × {1} 超過瀏覽器上限。\n請把第 1 步的 DPI 降到 600 或 1200，重新產生後再拼版。',
+    'al.layoutFail': '產生失敗：{0}\n\n通常原因：DPI 過高導致畫布超過瀏覽器上限。請把第 1 步 DPI 改成 600 或 1200 重試。',
+    'al.clearQueue': '清空整個佇列？',
+    'al.toBlobNull': 'toBlob 回傳 null（畫布過大）',
+    'al.canvasLimited': '瀏覽器畫布尺寸被限制（實際 {0} × {1}），DPI 太高了',
+    'in.outSize': '輸出尺寸：<code>{0} × {1}</code> 像素 · 物理 {2} × {3} cm @ {4} DPI',
+    'in.cutSize': '切口尺寸：<code>{0} × {1}</code> 像素 · {2} × {3} cm',
+    'in.bleedOut': '<strong>含出血輸出</strong>：<code>{0} × {1}</code> 像素 · {2} × {3} cm（每邊出血 {4} mm）@ {5} DPI',
+    'in.lensDetail': '每個光柵週期：<code>{0}</code> 像素 · 每張圖條紋寬：<code>{1}</code> 像素 · 光柵總數：<code>{2}</code>',
+    'in.warnStrip': '⚠ 每張圖分到的條紋不到 2 像素，效果會很糊。建議提高 DPI 或降低變換數。',
+    'in.warnNonInt': '提示：DPI/LPI = <code>{0}</code> 不是整數，會按浮點精確切片（屬正常）。如想取整，可讓 DPI 是 LPI 的整數倍（如 {1} DPI）。',
+    'in.calRange': '範圍：<code>{0} ~ {1} LPI</code>，每列差 <code>{2}</code>，共 <code>{3}</code> 列<br>輸出 <code>{4} × {5}</code> 像素 · {6} × {7} cm @ {8} DPI',
+    'in.layoutNoQueue': '下面新增圖到佇列（在第 4 步產生單張「+ 加入拼版佇列」、或點「+ 上傳圖片加入」從本機選 PNG / JPG）',
+    'in.layoutMismatch': '⚠ 佇列中存在不同像素尺寸的單張（不同 DPI / 出血 / 物理尺寸），無法拼到同一張大紙。請刪除尺寸不一致的項。',
+    'in.layoutNoFit': '⚠ 目前紙張和邊距下放不下任何一張，請調小邊距或換更大的紙',
+    'in.layoutCapacity': '紙張容量 <strong>{0} × {1} = {2}</strong> 張（{3}）· 像素 <code>{4} × {5}</code> @ {6} DPI · 記憶體 {7} MB',
+    'in.queueZero': '⚠ 佇列裡所有項數量都是 0，請加上數量或刪除。',
+    'in.queueOver': '⚠ 佇列要拼 {0} 張，但紙張只能放 {1} 張，多餘 {2} 張不會被排上。',
+    'in.queueUnder': '佇列 {0} 張 < 紙張容量 {1}，剩餘位置會留空。',
+    'in.queueExact': '佇列 {0} 張 = 紙張容量 {1}，剛好鋪滿。',
+    'in.singleMode': '單張模式：用第 4 步目前產生的圖填滿 {0} 個位置。',
+    'in.tooBig': '⚠ 像素超過瀏覽器畫布上限（單邊 {0} / 總面積 2.68 億）。請把第 1 步 DPI 降到 <strong>{1} 或更低</strong>，重新產生後再拼版。',
+    'in.heavy': '⚠ 記憶體約 {0} MB，產生會很慢。建議第 1 步 600~1200 DPI。',
+    'in.orient.portrait': '直向',
+    'in.orient.landscape': '橫向',
+    'qi.delete': '從佇列刪除這一種',
+    'tt.editTabRemove': '已調整',
+    'tt.layoutClickRemove': '點擊某一張可從佇列中移除一份',
+    'help.body': `
+      <h3>第一步：先做 LPI 校準（強烈建議）</h3>
+      <ol>
+        <li>切到「LPI 校準」標籤頁，根據光柵片標稱值設定中心 LPI（你的兩種是 50 和 75）</li>
+        <li>點擊「產生校準圖」，下載 PNG</li>
+        <li>用印表機按 <strong>實際尺寸</strong> 列印（關鍵：不要「適合頁面」，要選「實際大小」或「100%」）</li>
+        <li>把光柵片對齊貼在列印好的紙上，肉眼觀察。光柵條紋要和測試條紋平行</li>
+        <li>來回輕微轉動觀察，找到那一列——它的灰色最乾淨，沒有彩虹/波浪條紋</li>
+        <li>記下那一列旁邊寫的 LPI 數值（如 49.8 或 75.2）</li>
+      </ol>
+      <h3>第二步：產生交錯圖</h3>
+      <ol>
+        <li>回到「交錯圖產生」標籤</li>
+        <li>LPI 選「自訂」，填上一步測得的精確值（懶得校準就直接選 50 或 75）</li>
+        <li>DPI 選印表機的實際列印精度。家用噴墨一般 600，雷射 600 或 1200，照片印表機可到 1440 / 2400</li>
+        <li>變換數選 2 或 3。<strong>3 變效果更平滑，但每張圖解析度會少 1/3，需要素材清晰</strong></li>
+        <li>底圖尺寸：光柵片 8.6 × 5.4 cm 已是預設</li>
+        <li>光柵方向：拿光柵片，看條紋直立就選「直向」，水平就選「橫向」。<strong>不確定就兩種都試</strong></li>
+        <li>上傳 2 / 3 張圖。順序：轉動時看到的順序，例如 3 變為「左視角 / 正面 / 右視角」</li>
+        <li>點擊「產生交錯圖」，下載 PNG</li>
+      </ol>
+      <h3>第三步：列印</h3>
+      <div class="tip"><strong>關鍵：列印一定要按「實際尺寸/100%/不縮放」，不能選「適合頁面」。</strong>否則尺寸偏移幾像素，每條光柵都對不齊，立體效果就完了。</div>
+      <ul>
+        <li>匯出的 PNG 含 DPI 元資料，多數軟體（Photoshop、Acrobat、IrfanView）會自動按真實尺寸排版</li>
+        <li>印表機選最高品質 / 相片模式</li>
+        <li>紙推薦：相紙或較厚的噴墨紙，普通紙墨水易擴散導致條紋模糊</li>
+        <li>印完先量尺寸，必須正好 8.6 × 5.4 cm，差幾毫米就要重印</li>
+      </ul>
+      <h3>第四步：貼合</h3>
+      <ol>
+        <li>把列印紙裁到和光柵片一樣大</li>
+        <li>光柵片光滑面朝外（凸出有條紋的那面朝外），平面朝向列印圖</li>
+        <li>對齊角落，用極少量膠水或雙面膠固定（別讓膠跑到中間）</li>
+        <li>從不同角度看，應該能看到圖像切換</li>
+      </ol>
+      <h3>素材如何準備</h3>
+      <ul>
+        <li><strong>2 變（左右切換兩張圖）</strong>：任意兩張相關或對比的圖，例如表情兩種、白天黑夜、變身前後</li>
+        <li><strong>3 變（3 張依序切換）</strong>：連續動作 3 幀，或同一物體的左/正/右三個視角（基本「立體」效果）</li>
+        <li>所有圖建議寬高比接近 8.6:5.4 ≈ 16:10，不一致會被裁切（中心保留）</li>
+        <li>解析度越高越好，至少要和最終輸出像素相當</li>
+      </ul>
+      <h3>常見問題</h3>
+      <ul>
+        <li><strong>看到一片虹彩條紋</strong>：LPI 沒對準，回去做校準</li>
+        <li><strong>圖像有重影</strong>：光柵方向選錯，或貼合時旋轉了角度</li>
+        <li><strong>切換不乾脆，能看到中間過渡</strong>：正常現象，光柵片本身有過渡區</li>
+        <li><strong>顏色發灰發暗</strong>：每張原圖飽和度可調高一些再用</li>
+        <li><strong>3 變中間那張看不清</strong>：觀察角度不對，或光柵片本身只支援 2 變</li>
+      </ul>
+      <h3>關於寬高比和尺寸</h3>
+      <p>你的光柵片是 8.6 × 5.4 cm。要在更大的紙上放多張，可用圖片處理軟體把產生的 PNG 排版到 A4，每張佔 8.6 × 5.4，<strong>排版時不可縮放</strong>。</p>
+    `,
+  },
+  'en': {
+    'app.title': 'Lenticular Print Pattern Generator',
+    'app.subtitle': 'Generate ready-to-print interleaved patterns for LPI lenticular sheets (3D / 2-flip / 3-flip)',
+    'nav.interlace': '① Generate',
+    'nav.calibration': '② LPI Calibration',
+    'nav.help': 'How to Use',
+    'common.custom': 'Custom...',
+    'common.cancel': 'Cancel',
+    'common.apply': 'Apply',
+    'common.confirm': 'OK',
+    's1.head': '1. Settings',
+    's1.lpi': 'Lenticular LPI (lines/inch)',
+    's1.lpiCustom': 'Custom LPI',
+    's1.dpi': 'Print DPI',
+    's1.numImg': 'Variants',
+    's1.var2': '2-flip (2 images)',
+    's1.var3': '3-flip (3 images)',
+    's1.size': 'Size cm (W × H)',
+    's1.orient': 'Lens Direction',
+    's1.vert': 'Vertical (left/right flip)',
+    's1.horiz': 'Horizontal (up/down flip)',
+    's1.bg': 'Background (fill transparent)',
+    's1.transparent': 'Keep transparent (export transparent PNG)',
+    's1.bleed': 'Add bleed',
+    's1.bleedW': 'Bleed width (mm, each side)',
+    's1.cutMarks': 'Add crop marks (4 corners, removed when trimmed)',
+    's2.head': '2. Select Images',
+    's2.hint': 'Order matters: when shifting left→right (or up→down), the 1st image is seen first. Click to upload, or drag images here.',
+    's2.lab.left': 'Image 1 (Left view)',
+    's2.lab.right': 'Image 2 (Right view)',
+    's2.lab.start': 'Image 1 (Left/Start)',
+    's2.lab.middle': 'Image 2 (Middle)',
+    's2.lab.end': 'Image 3 (Right/End)',
+    's2.tap': 'Click or drop image',
+    's3.head': '3. Adjust Size, Rotation, Position (optional)',
+    's3.hint': 'Each image defaults to "cover-fit" (center crop). Click a tab below to switch which image you\'re editing; the editor can overlay other images as alignment references. <strong>Changes save instantly</strong>; press "Cover" to revert.',
+    's3.empty': 'Please upload images in Step 2 first, then come back to adjust',
+    's3.tab': 'Image {0}',
+    's3.notUploaded': 'not uploaded',
+    's3.editorHint': 'The whole canvas = <strong>output area</strong>. <strong>Drag</strong> to move · <strong>Scroll</strong> to zoom',
+    'ed.rotL': '↺ 90°',
+    'ed.rotR': '↻ 90°',
+    'ed.zoom': 'Zoom',
+    'ed.fit': 'Cover',
+    'ed.crop': '✂ Crop',
+    'ed.overlay': 'Compare with:',
+    'ed.opacity': 'Opacity',
+    'crop.help': '<strong>Crop mode</strong>: drag corners to resize · drag inside to move · area outside is discarded',
+    'crop.clear': 'Clear crop',
+    's4.head': '4. Generate & Download',
+    's4.btn.gen': 'Generate Pattern',
+    's4.btn.down': 'Download PNG',
+    's4.btn.add': '+ Add to layout queue',
+    's4.btn.addTitle': 'Save current pattern to layout queue. You can change images and add more.',
+    's4.statusGen': '✓ Generated',
+    's4.statusProc': 'Processing...',
+    's4.previewEmpty': 'Preview will appear here after generating',
+    's5.head': '5. Layout to A4 / A3 (optional)',
+    's5.hint': 'Select paper size first, then add images to the queue below: from Step 4 "+ Add to layout queue", or directly upload PNGs from your computer. <br>Adding new items auto-distributes count evenly (fill → half each → third each ...); you can adjust afterward to leave blanks.',
+    's5.paperSize': 'Paper size',
+    's5.paperOrient': 'Orientation',
+    's5.po.auto': 'Auto (most fits)',
+    's5.po.portrait': 'Portrait',
+    's5.po.landscape': 'Landscape',
+    's5.paperMargin': 'Paper margin (mm)',
+    's5.paperSpacing': 'Spacing (mm)',
+    's5.paperCustom': 'Custom mm (short × long)',
+    's5.queueHead': 'Layout Queue',
+    's5.queueEmpty': '(empty)',
+    's5.queueSummary': '({0} types · {1} pcs total)',
+    's5.queueUpload': '+ Upload images',
+    's5.queueClear': 'Clear queue',
+    's5.queueEmptyHint': 'Queue is empty.<br>① Generate in Step 4, then click "+ Add to layout queue"<br>② Or click "+ Upload images" above to add PNG/JPG (multi-select & drag supported)',
+    's5.btn.gen': 'Generate Layout',
+    's5.btn.down': 'Download PNG',
+    's5.layoutEmpty': 'Layout preview will appear here after generating',
+    's5.unitName.from3': '{0}×{1}cm · {2}LPI · {3}-flip',
+    's5.unitName.upload': 'Upload · {0} · {1}×{2}px',
+    's5.itemPrefix': 'Set {0}',
+    'cal.head': 'LPI Calibration Test',
+    'cal.intro': 'Real lenticular sheets typically deviate ±0.3 ~ ±1.0 from nominal LPI. Print this test, place sheet on top, observe: <strong>the row with the most uniform gray (no rainbow/moiré bands) shows your sheet\'s true LPI</strong>. Use that value as Custom LPI in Step 1 for best 3D effect.',
+    'cal.center': 'Center LPI',
+    'cal.step': 'Step (per row)',
+    'cal.count': 'Rows (odd)',
+    'cal.dpi': 'Print DPI',
+    'cal.size': 'Size cm (W × H)',
+    'cal.orient': 'Lens Direction',
+    'cal.vertCal': 'Vertical (lines vertical)',
+    'cal.horizCal': 'Horizontal (lines horizontal)',
+    'cal.btn.gen': 'Generate Calibration',
+    'cal.btn.down': 'Download PNG',
+    'cal.empty': 'Preview will appear here after generating',
+    'al.uploadFirst': 'Please upload image #{0} first',
+    'al.notImage': 'Selected files are not images',
+    'al.fileLoadFail': 'These files failed to load:\n{0}',
+    'al.genFirst': 'Please generate at least one image in Step 4 first',
+    'al.sizeMismatch': 'Queue contains images of different pixel sizes; cannot fit on same sheet',
+    'al.noPiece': 'No images to lay out',
+    'al.tooBig': 'Canvas {0} × {1} exceeds browser limit.\nReduce DPI in Step 1 to 600 or 1200, regenerate, and try layout again.',
+    'al.layoutFail': 'Layout generation failed: {0}\n\nUsually caused by DPI too high. Set DPI to 600 or 1200 in Step 1 and retry.',
+    'al.clearQueue': 'Clear entire queue?',
+    'al.toBlobNull': 'toBlob returned null (canvas too large)',
+    'al.canvasLimited': 'Browser limited canvas size (actual {0} × {1}); DPI too high',
+    'in.outSize': 'Output: <code>{0} × {1}</code> px · {2} × {3} cm @ {4} DPI',
+    'in.cutSize': 'Trim size: <code>{0} × {1}</code> px · {2} × {3} cm',
+    'in.bleedOut': '<strong>With bleed</strong>: <code>{0} × {1}</code> px · {2} × {3} cm ({4} mm each side) @ {5} DPI',
+    'in.lensDetail': 'Lens period: <code>{0}</code> px · Strip per image: <code>{1}</code> px · Total lenses: <code>{2}</code>',
+    'in.warnStrip': '⚠ Each image gets less than 2 px per strip; will look blurry. Increase DPI or reduce variants.',
+    'in.warnNonInt': 'Note: DPI/LPI = <code>{0}</code> is non-integer; will use exact float slicing (normal). For integer alignment, use DPI as multiple of LPI (e.g., {1} DPI).',
+    'in.calRange': 'Range: <code>{0} ~ {1} LPI</code>, step <code>{2}</code>, total <code>{3}</code> rows<br>Output <code>{4} × {5}</code> px · {6} × {7} cm @ {8} DPI',
+    'in.layoutNoQueue': 'Add images to the queue below (Generate in Step 4 then "+ Add to layout queue", or click "+ Upload images" to pick PNG/JPG from your computer)',
+    'in.layoutMismatch': '⚠ Queue contains images of different pixel sizes (different DPI / bleed / physical size); cannot lay out on same sheet. Remove inconsistent items.',
+    'in.layoutNoFit': '⚠ Current paper and margin can\'t fit any image; reduce margin or use larger paper',
+    'in.layoutCapacity': 'Paper capacity <strong>{0} × {1} = {2}</strong> pcs ({3}) · pixels <code>{4} × {5}</code> @ {6} DPI · memory {7} MB',
+    'in.queueZero': '⚠ All queue items have count 0; please increase counts or remove.',
+    'in.queueOver': '⚠ Queue needs {0} pcs but paper fits only {1}; extra {2} won\'t be placed.',
+    'in.queueUnder': 'Queue {0} pcs < capacity {1}; remaining slots will be blank.',
+    'in.queueExact': 'Queue {0} pcs = capacity {1}; fits perfectly.',
+    'in.singleMode': 'Single mode: fill {0} positions with current Step 4 output.',
+    'in.tooBig': '⚠ Pixels exceed browser canvas limit (max side {0} / max area 268M). Reduce DPI in Step 1 to <strong>{1} or below</strong>, regenerate, then retry.',
+    'in.heavy': '⚠ Memory ~{0} MB; will be slow. Recommend 600~1200 DPI in Step 1.',
+    'in.orient.portrait': 'portrait',
+    'in.orient.landscape': 'landscape',
+    'qi.delete': 'Remove this set from queue',
+    'tt.editTabRemove': 'modified',
+    'tt.layoutClickRemove': 'Click any piece to remove one from queue',
+    'help.body': `
+      <h3>Step 1: Calibrate LPI first (highly recommended)</h3>
+      <ol>
+        <li>Switch to the "LPI Calibration" tab and set the center LPI to the sheet's nominal value (e.g. 50 or 75)</li>
+        <li>Click "Generate Calibration" and download the PNG</li>
+        <li>Print at <strong>actual size</strong> (key: do NOT use "fit to page" — choose "actual size" or "100%")</li>
+        <li>Place the lenticular sheet on the printout. The lens lines must be parallel to the test stripes</li>
+        <li>Tilt slightly while observing — find the row with the cleanest gray (no rainbow/wavy patterns)</li>
+        <li>Note the LPI value next to that row (e.g. 49.8 or 75.2)</li>
+      </ol>
+      <h3>Step 2: Generate the interlaced pattern</h3>
+      <ol>
+        <li>Switch to the "Generate" tab</li>
+        <li>Set LPI to "Custom" and enter the calibrated value (or just pick 50/75 if skipping calibration)</li>
+        <li>Set DPI to your printer's actual resolution. Home inkjet typically 600, laser 600 or 1200, photo printers up to 1440 / 2400</li>
+        <li>Choose 2 or 3 variants. <strong>3-flip is smoother but each image gets 1/3 fewer pixels — sources need to be sharp</strong></li>
+        <li>Output size: e.g. 8.6 × 5.4 cm by default</li>
+        <li>Lens direction: hold the sheet — if lens lines are vertical pick "Vertical", if horizontal pick "Horizontal". <strong>If unsure, generate both</strong></li>
+        <li>Upload 2 / 3 images. Order: the order they appear when tilting. For 3-flip: "Left view / Front view / Right view"</li>
+        <li>Click "Generate Pattern" and download the PNG</li>
+      </ol>
+      <h3>Step 3: Print</h3>
+      <div class="tip"><strong>Critical: print at "actual size / 100% / no scaling" — never "fit to page".</strong> Otherwise pixels shift, every lens misaligns, and the 3D effect breaks.</div>
+      <ul>
+        <li>The exported PNG embeds DPI metadata; most software (Photoshop, Acrobat, IrfanView) will respect it automatically</li>
+        <li>Use the printer's highest quality / photo mode</li>
+        <li>Paper: photo paper or thicker inkjet paper. Plain paper bleeds and blurs the stripes</li>
+        <li>Measure the print: must be exactly 8.6 × 5.4 cm — a few mm off and you must reprint</li>
+      </ul>
+      <h3>Step 4: Mount</h3>
+      <ol>
+        <li>Trim the print to match the lenticular sheet</li>
+        <li>Lens-side facing out (textured side outward), flat side toward the printed image</li>
+        <li>Align corners; fix with minimal glue or double-sided tape (avoid the central area)</li>
+        <li>Tilt to view — you should see the images switch</li>
+      </ol>
+      <h3>Preparing source images</h3>
+      <ul>
+        <li><strong>2-flip (two images)</strong>: any pair, e.g. two expressions, day/night, before/after transformation</li>
+        <li><strong>3-flip (three images)</strong>: 3 frames of motion, or the left/center/right views of an object (basic "3D")</li>
+        <li>Aim for ~8.6:5.4 ≈ 16:10 aspect ratio; mismatches will be center-cropped</li>
+        <li>Higher resolution is better, at least matching the final output pixels</li>
+      </ul>
+      <h3>FAQ</h3>
+      <ul>
+        <li><strong>Rainbow pattern everywhere</strong>: LPI off — recalibrate</li>
+        <li><strong>Ghost/double images</strong>: wrong lens direction or rotation during mounting</li>
+        <li><strong>Soft transitions between images</strong>: normal — lenticular has a transition zone</li>
+        <li><strong>Colors look gray/dim</strong>: increase saturation in your source images</li>
+        <li><strong>Middle frame in 3-flip is hard to see</strong>: viewing angle wrong, or sheet only supports 2-flip</li>
+      </ul>
+      <h3>About aspect ratio and size</h3>
+      <p>Your lenticular sheet is 8.6 × 5.4 cm. To fit more on a larger sheet of paper, place generated PNGs onto an A4 sheet keeping each at exactly 8.6 × 5.4 cm — <strong>no scaling allowed during layout</strong>.</p>
+    `,
+  },
+  'ja': {
+    'app.title': 'レンチキュラー印刷パターン生成器',
+    'app.subtitle': 'LPI レンチキュラーシート（3D / 2 変・3 変）用の印刷可能なインターレース画像を生成',
+    'nav.interlace': '① 生成',
+    'nav.calibration': '② LPI 校正',
+    'nav.help': '使い方',
+    'common.custom': 'カスタム...',
+    'common.cancel': 'キャンセル',
+    'common.apply': '適用',
+    'common.confirm': 'OK',
+    's1.head': '1. 設定',
+    's1.lpi': 'レンチキュラー LPI（線/インチ）',
+    's1.lpiCustom': 'カスタム LPI',
+    's1.dpi': '印刷 DPI',
+    's1.numImg': 'バリエーション',
+    's1.var2': '2 変（2 枚）',
+    's1.var3': '3 変（3 枚）',
+    's1.size': 'サイズ cm（幅 × 高さ）',
+    's1.orient': 'レンズ方向',
+    's1.vert': '縦レンズ（左右切替）',
+    's1.horiz': '横レンズ（上下切替）',
+    's1.bg': '背景色（透明部分の塗り）',
+    's1.transparent': '透明を保持（透明 PNG として出力）',
+    's1.bleed': '裁ち落とし追加',
+    's1.bleedW': '裁ち落とし幅 (mm、各辺)',
+    's1.cutMarks': 'トンボ追加（4 隅 L 字、裁断後に消える）',
+    's2.head': '2. 画像を選択',
+    's2.hint': '順序が重要：左→右（または上→下）に切り替えるとき、1 枚目が最初に見えます。クリックでアップロード、または画像をドラッグ＆ドロップ。',
+    's2.lab.left': '1 枚目（左視点）',
+    's2.lab.right': '2 枚目（右視点）',
+    's2.lab.start': '1 枚目（左/開始）',
+    's2.lab.middle': '2 枚目（中央）',
+    's2.lab.end': '3 枚目（右/終了）',
+    's2.tap': 'クリックまたは画像をドロップ',
+    's3.head': '3. 大きさ・回転・位置を調整（任意）',
+    's3.hint': '各画像はデフォルトで「カバーフィット」（中央クロップ）。下のタブで編集する画像を切替。エディタ内で他の画像を重ねて位置合わせ参考にできます。<strong>変更は即時保存</strong>、デフォルトに戻すには「カバー」をクリック。',
+    's3.empty': 'まずステップ 2 で画像をアップロードしてください',
+    's3.tab': '{0} 枚目',
+    's3.notUploaded': '未アップロード',
+    's3.editorHint': 'キャンバス全体 = <strong>出力範囲</strong>。<strong>ドラッグ</strong>で移動 · <strong>ホイール</strong>でズーム',
+    'ed.rotL': '↺ 90°',
+    'ed.rotR': '↻ 90°',
+    'ed.zoom': 'ズーム',
+    'ed.fit': 'カバー',
+    'ed.crop': '✂ 切り抜き',
+    'ed.overlay': '比較表示：',
+    'ed.opacity': '不透明度',
+    'crop.help': '<strong>切り抜きモード</strong>：4 隅をドラッグでサイズ変更 · 内側をドラッグで移動 · 外側は破棄',
+    'crop.clear': '切り抜き解除',
+    's4.head': '4. 生成とダウンロード',
+    's4.btn.gen': 'パターン生成',
+    's4.btn.down': 'PNG ダウンロード',
+    's4.btn.add': '+ 面付けキューに追加',
+    's4.btn.addTitle': '現在のパターンを面付けキューに保存。画像を変えて続けて追加できます',
+    's4.statusGen': '✓ 生成完了',
+    's4.statusProc': '処理中...',
+    's4.previewEmpty': '生成後にプレビュー表示',
+    's5.head': '5. A4 / A3 への面付け（任意）',
+    's5.hint': 'まず用紙サイズを選び、次に下のキューに画像を追加：ステップ 4 の「+ 面付けキューに追加」、または「+ 画像をアップロード」で PC から PNG を直接追加。<br>新規追加時は容量に応じて自動均等分配（満載 → 半々 → 三等分 ...）、後から手動で調整可能。',
+    's5.paperSize': '用紙サイズ',
+    's5.paperOrient': '用紙方向',
+    's5.po.auto': '自動（最大）',
+    's5.po.portrait': '縦',
+    's5.po.landscape': '横',
+    's5.paperMargin': '用紙余白 (mm)',
+    's5.paperSpacing': '間隔 (mm)',
+    's5.paperCustom': 'カスタム mm（短辺 × 長辺）',
+    's5.queueHead': '面付けキュー',
+    's5.queueEmpty': '(空)',
+    's5.queueSummary': '({0} 種 · 計 {1} 枚)',
+    's5.queueUpload': '+ 画像をアップロード',
+    's5.queueClear': 'キュー消去',
+    's5.queueEmptyHint': 'キューが空です。<br>① ステップ 4 で生成後「+ 面付けキューに追加」<br>② または上の「+ 画像をアップロード」で PNG / JPG を選択（複数選択・ドラッグ対応）',
+    's5.btn.gen': '面付け生成',
+    's5.btn.down': 'PNG ダウンロード',
+    's5.layoutEmpty': '生成後にプレビュー表示',
+    's5.unitName.from3': '{0}×{1}cm · {2}LPI · {3} 変',
+    's5.unitName.upload': 'アップロード · {0} · {1}×{2}px',
+    's5.itemPrefix': '第 {0} 組',
+    'cal.head': 'LPI 校正テスト',
+    'cal.intro': '実際のレンチキュラーシートは公称 LPI から ±0.3 ~ ±1.0 ずれることが多い。このテストを印刷してシートを重ね、<strong>もっとも均一なグレー（虹色やモアレなし）の行の値が真の LPI</strong>。その値をステップ 1 の「カスタム LPI」に入力すると立体効果が向上。',
+    'cal.center': '中心 LPI',
+    'cal.step': 'ステップ（行差）',
+    'cal.count': '行数（奇数）',
+    'cal.dpi': '印刷 DPI',
+    'cal.size': 'サイズ cm（幅 × 高さ）',
+    'cal.orient': 'レンズ方向',
+    'cal.vertCal': '縦（線が垂直）',
+    'cal.horizCal': '横（線が水平）',
+    'cal.btn.gen': '校正画像生成',
+    'cal.btn.down': 'PNG ダウンロード',
+    'cal.empty': '生成後にプレビュー表示',
+    'al.uploadFirst': '画像 #{0} をアップロードしてください',
+    'al.notImage': '選択ファイルは画像ではありません',
+    'al.fileLoadFail': '次のファイルの読込みに失敗：\n{0}',
+    'al.genFirst': 'ステップ 4 で少なくとも 1 枚生成してください',
+    'al.sizeMismatch': 'キュー内に異なるピクセルサイズの画像があります。同じ用紙に面付けできません',
+    'al.noPiece': '面付けする画像がありません',
+    'al.tooBig': 'キャンバス {0} × {1} はブラウザ上限を超えます。\nステップ 1 の DPI を 600 または 1200 に下げ、再生成してから面付けしてください。',
+    'al.layoutFail': '生成失敗：{0}\n\n通常は DPI 過高が原因。ステップ 1 の DPI を 600 または 1200 に変更して再試行。',
+    'al.clearQueue': 'キュー全体を消去しますか？',
+    'al.toBlobNull': 'toBlob が null を返却（キャンバスが大きすぎる）',
+    'al.canvasLimited': 'ブラウザによりキャンバスサイズ制限（実際 {0} × {1}）、DPI が高すぎ',
+    'in.outSize': '出力：<code>{0} × {1}</code> px · 物理 {2} × {3} cm @ {4} DPI',
+    'in.cutSize': '仕上り：<code>{0} × {1}</code> px · {2} × {3} cm',
+    'in.bleedOut': '<strong>裁ち落とし込み</strong>：<code>{0} × {1}</code> px · {2} × {3} cm（各辺 {4} mm）@ {5} DPI',
+    'in.lensDetail': 'レンズピッチ：<code>{0}</code> px · 1 枚あたりの帯幅：<code>{1}</code> px · 総レンズ数：<code>{2}</code>',
+    'in.warnStrip': '⚠ 1 枚あたり 2 px 未満。ぼやけます。DPI を上げるかバリエーション数を減らしてください。',
+    'in.warnNonInt': 'ヒント：DPI/LPI = <code>{0}</code> は非整数。浮動小数で正確にスライス（正常）。整数に揃えたい場合、DPI を LPI の整数倍に（例 {1} DPI）。',
+    'in.calRange': '範囲：<code>{0} ~ {1} LPI</code>、行差 <code>{2}</code>、計 <code>{3}</code> 行<br>出力 <code>{4} × {5}</code> px · {6} × {7} cm @ {8} DPI',
+    'in.layoutNoQueue': '下のキューに画像を追加（ステップ 4 で生成後「+ 面付けキューに追加」、または「+ 画像をアップロード」で PNG / JPG を選択）',
+    'in.layoutMismatch': '⚠ キュー内に異なるピクセルサイズの画像（DPI / 裁ち落とし / 物理サイズが異なる）があり、同じ用紙に面付けできません。不整合な項目を削除してください。',
+    'in.layoutNoFit': '⚠ 現在の用紙と余白では 1 枚も入りません。余白を縮めるか大きい用紙を選択してください',
+    'in.layoutCapacity': '用紙容量 <strong>{0} × {1} = {2}</strong> 枚（{3}）· ピクセル <code>{4} × {5}</code> @ {6} DPI · メモリ {7} MB',
+    'in.queueZero': '⚠ キュー内の全項目の数量が 0。数量を増やすか削除してください。',
+    'in.queueOver': '⚠ キューは {0} 枚必要、用紙容量は {1} 枚。{2} 枚は配置されません。',
+    'in.queueUnder': 'キュー {0} 枚 < 容量 {1}、残りスペースは空白になります。',
+    'in.queueExact': 'キュー {0} 枚 = 容量 {1}、ぴったり収まります。',
+    'in.singleMode': '単一モード：ステップ 4 の現在の画像で {0} 箇所を埋めます。',
+    'in.tooBig': '⚠ ピクセルがブラウザ上限超過（単辺 {0} / 総面積 2.68 億）。ステップ 1 の DPI を <strong>{1} 以下</strong> に下げ再生成してください。',
+    'in.heavy': '⚠ メモリ約 {0} MB、生成が遅くなります。ステップ 1 で 600~1200 DPI 推奨。',
+    'in.orient.portrait': '縦',
+    'in.orient.landscape': '横',
+    'qi.delete': 'この種類をキューから削除',
+    'tt.editTabRemove': '調整済み',
+    'tt.layoutClickRemove': 'クリックでキューから 1 枚削除',
+    'help.body': `
+      <h3>ステップ 1：まず LPI 校正（強く推奨）</h3>
+      <ol>
+        <li>「LPI 校正」タブに切り替え、シートの公称値に中心 LPI を設定（例：50 または 75）</li>
+        <li>「校正画像生成」をクリックし PNG をダウンロード</li>
+        <li>プリンターで <strong>実寸</strong> 印刷（重要：「ページに合わせる」ではなく「実際のサイズ」「100%」を選ぶ）</li>
+        <li>レンチキュラーシートを印刷物に重ね、肉眼で観察。レンズ線とテスト縞が平行になるように</li>
+        <li>少しずつ傾けて観察し、もっとも均一なグレー（虹色や波模様がない）の行を探す</li>
+        <li>その行の横に書かれた LPI 値をメモ（例：49.8 や 75.2）</li>
+      </ol>
+      <h3>ステップ 2：インターレース画像を生成</h3>
+      <ol>
+        <li>「生成」タブに戻る</li>
+        <li>LPI を「カスタム」にし、校正で得た値を入力（校正を省くなら 50 / 75 を選択）</li>
+        <li>DPI はプリンターの実解像度に合わせる。家庭用インクジェットは通常 600、レーザーは 600 または 1200、写真プリンターは 1440 / 2400 まで</li>
+        <li>バリエーションは 2 または 3 を選択。<strong>3 変は滑らかですが各画像の解像度が 1/3 になるため、素材は鮮明に</strong></li>
+        <li>出力サイズ：8.6 × 5.4 cm がデフォルト</li>
+        <li>レンズ方向：シートを持ってレンズ線が垂直なら「縦」、水平なら「横」を選ぶ。<strong>不明なら両方生成して試す</strong></li>
+        <li>2 / 3 枚の画像をアップロード。順序：傾けたときに見える順、3 変なら「左視点 / 正面 / 右視点」</li>
+        <li>「パターン生成」→ PNG ダウンロード</li>
+      </ol>
+      <h3>ステップ 3：印刷</h3>
+      <div class="tip"><strong>重要：印刷時は必ず「実寸 / 100% / 拡大縮小なし」、「ページに合わせる」は絶対に選ばない。</strong>数ピクセルでもずれるとレンズが揃わず、立体効果が崩れます。</div>
+      <ul>
+        <li>出力 PNG は DPI メタデータ付き。多くのソフト（Photoshop、Acrobat、IrfanView）は自動で実寸配置します</li>
+        <li>プリンターは最高品質 / フォトモード</li>
+        <li>用紙：フォト用紙か厚手のインクジェット紙推奨。普通紙はインクが滲んで縞がぼやけます</li>
+        <li>印刷後にサイズを実測：必ず 8.6 × 5.4 cm。数 mm 違っても再印刷</li>
+      </ul>
+      <h3>ステップ 4：貼り合わせ</h3>
+      <ol>
+        <li>印刷紙をシートと同じ大きさに裁断</li>
+        <li>シートの凸面（レンズ面）を外、平らな面を印刷面側に</li>
+        <li>角を合わせ、ごく少量の糊か両面テープで固定（中央には貼らない）</li>
+        <li>傾けて画像が切り替わることを確認</li>
+      </ol>
+      <h3>素材の準備</h3>
+      <ul>
+        <li><strong>2 変（2 枚切替）</strong>：関連性のある 2 枚、例：表情 2 種、昼夜、変身前後</li>
+        <li><strong>3 変（3 枚順次切替）</strong>：連続動作 3 フレーム、または左/正/右の 3 視点（基本的な「3D」効果）</li>
+        <li>すべての画像は 8.6:5.4 ≈ 16:10 の比率推奨、合わない場合は中央クロップ</li>
+        <li>解像度は高いほど良い、最終出力ピクセル以上を目安に</li>
+      </ul>
+      <h3>よくある問題</h3>
+      <ul>
+        <li><strong>全面に虹色の縞</strong>：LPI が合っていない、再校正してください</li>
+        <li><strong>画像にゴースト/ダブり</strong>：レンズ方向を間違えた、または貼り付け時に回転している</li>
+        <li><strong>切替が曖昧で中間が見える</strong>：正常、レンチキュラーには遷移領域があります</li>
+        <li><strong>色がくすんで見える</strong>：元画像の彩度を少し上げてから使用</li>
+        <li><strong>3 変の中央が見えない</strong>：観察角度が不適、またはシートが 2 変専用の可能性</li>
+      </ul>
+      <h3>アスペクト比とサイズについて</h3>
+      <p>お持ちのシートは 8.6 × 5.4 cm。大きい用紙に複数配置したい場合、画像処理ソフトで生成 PNG を A4 上に各 8.6 × 5.4 cm のまま並べます。<strong>配置時に拡大縮小は不可</strong>。</p>
+    `,
+  },
+  'ko': {
+    'app.title': '렌티큘러 인쇄 패턴 생성기',
+    'app.subtitle': 'LPI 렌티큘러 시트(3D / 2 변 / 3 변)용 인쇄 가능한 인터레이스 패턴 생성',
+    'nav.interlace': '① 생성',
+    'nav.calibration': '② LPI 보정',
+    'nav.help': '사용법',
+    'common.custom': '사용자 지정...',
+    'common.cancel': '취소',
+    'common.apply': '적용',
+    'common.confirm': '확인',
+    's1.head': '1. 설정',
+    's1.lpi': '렌티큘러 LPI(라인/인치)',
+    's1.lpiCustom': '사용자 지정 LPI',
+    's1.dpi': '인쇄 DPI',
+    's1.numImg': '이미지 수',
+    's1.var2': '2 변(2 장)',
+    's1.var3': '3 변(3 장)',
+    's1.size': '크기 cm(가로 × 세로)',
+    's1.orient': '렌즈 방향',
+    's1.vert': '세로 렌즈(좌우 전환)',
+    's1.horiz': '가로 렌즈(상하 전환)',
+    's1.bg': '배경색(투명 영역 채움)',
+    's1.transparent': '투명 유지(투명 PNG로 출력)',
+    's1.bleed': '재단 여백 추가',
+    's1.bleedW': '재단 여백(mm, 각 변)',
+    's1.cutMarks': '재단 마크 추가(4 모서리 L자, 재단 후 제거됨)',
+    's2.head': '2. 이미지 선택',
+    's2.hint': '순서가 중요: 좌→우(또는 위→아래) 전환 시 1 번째 이미지가 먼저 보입니다. 클릭하여 업로드하거나 이미지를 끌어다 놓으세요.',
+    's2.lab.left': '1 번째(왼쪽 시점)',
+    's2.lab.right': '2 번째(오른쪽 시점)',
+    's2.lab.start': '1 번째(왼쪽/시작)',
+    's2.lab.middle': '2 번째(가운데)',
+    's2.lab.end': '3 번째(오른쪽/끝)',
+    's2.tap': '클릭하거나 이미지 끌어다 놓기',
+    's3.head': '3. 크기·회전·위치 조정(선택)',
+    's3.hint': '각 이미지는 기본적으로 "커버 핏"(중앙 자르기). 아래 탭에서 편집할 이미지를 전환하세요. 편집기에서 다른 이미지를 겹쳐 정렬 참조로 표시할 수 있습니다. <strong>변경은 즉시 저장</strong>, "꽉 채우기"로 기본 복원.',
+    's3.empty': '먼저 2 단계에서 이미지를 업로드한 후 다시 오세요',
+    's3.tab': '{0} 번째',
+    's3.notUploaded': '미업로드',
+    's3.editorHint': '전체 캔버스 = <strong>출력 영역</strong>. <strong>드래그</strong>하여 이동 · <strong>스크롤</strong>하여 확대/축소',
+    'ed.rotL': '↺ 90°',
+    'ed.rotR': '↻ 90°',
+    'ed.zoom': '확대/축소',
+    'ed.fit': '꽉 채우기',
+    'ed.crop': '✂ 자르기',
+    'ed.overlay': '겹쳐 비교:',
+    'ed.opacity': '투명도',
+    'crop.help': '<strong>자르기 모드</strong>: 4 모서리를 끌어 크기 조절 · 안쪽을 끌어 이동 · 바깥쪽 영역은 버려짐',
+    'crop.clear': '자르기 제거',
+    's4.head': '4. 생성 및 다운로드',
+    's4.btn.gen': '패턴 생성',
+    's4.btn.down': 'PNG 다운로드',
+    's4.btn.add': '+ 면 부착 큐에 추가',
+    's4.btn.addTitle': '현재 패턴을 면 부착 큐에 저장. 이미지를 바꿔 더 추가할 수 있습니다.',
+    's4.statusGen': '✓ 생성됨',
+    's4.statusProc': '처리 중...',
+    's4.previewEmpty': '생성 후 미리보기가 표시됩니다',
+    's5.head': '5. A4 / A3에 면 부착(선택)',
+    's5.hint': '용지 크기를 먼저 선택하고, 아래 큐에 이미지 추가: 4 단계의 "+ 면 부착 큐에 추가" 또는 "+ 이미지 업로드"로 PC에서 직접 PNG 추가. <br>새 항목 추가 시 용량에 따라 자동 균등 분배(꽉 채움 → 절반 → 1/3...). 이후 수동 조정 가능.',
+    's5.paperSize': '용지 크기',
+    's5.paperOrient': '용지 방향',
+    's5.po.auto': '자동(최대)',
+    's5.po.portrait': '세로',
+    's5.po.landscape': '가로',
+    's5.paperMargin': '용지 여백(mm)',
+    's5.paperSpacing': '간격(mm)',
+    's5.paperCustom': '사용자 지정 mm(짧은 변 × 긴 변)',
+    's5.queueHead': '면 부착 큐',
+    's5.queueEmpty': '(비어 있음)',
+    's5.queueSummary': '({0} 종 · 총 {1} 장)',
+    's5.queueUpload': '+ 이미지 업로드',
+    's5.queueClear': '큐 비우기',
+    's5.queueEmptyHint': '큐가 비어 있습니다.<br>① 4 단계 생성 후 "+ 면 부착 큐에 추가" 클릭<br>② 또는 위 "+ 이미지 업로드"로 PNG / JPG 선택(다중 선택·드래그 지원)',
+    's5.btn.gen': '면 부착 생성',
+    's5.btn.down': 'PNG 다운로드',
+    's5.layoutEmpty': '생성 후 미리보기가 표시됩니다',
+    's5.unitName.from3': '{0}×{1}cm · {2}LPI · {3} 변',
+    's5.unitName.upload': '업로드 · {0} · {1}×{2}px',
+    's5.itemPrefix': '{0} 번 세트',
+    'cal.head': 'LPI 보정 테스트',
+    'cal.intro': '실제 렌티큘러 시트는 보통 공칭 LPI에서 ±0.3 ~ ±1.0 편차가 있습니다. 이 테스트를 인쇄하고 시트를 올려 관찰: <strong>가장 균일한 회색(무지개·모아레 없음) 행의 값이 시트의 진짜 LPI</strong>. 그 값을 1 단계의 "사용자 지정 LPI"에 입력하면 입체 효과가 좋아집니다.',
+    'cal.center': '중심 LPI',
+    'cal.step': '간격(행마다)',
+    'cal.count': '행 수(홀수)',
+    'cal.dpi': '인쇄 DPI',
+    'cal.size': '크기 cm(가로 × 세로)',
+    'cal.orient': '렌즈 방향',
+    'cal.vertCal': '세로(선이 수직)',
+    'cal.horizCal': '가로(선이 수평)',
+    'cal.btn.gen': '보정 이미지 생성',
+    'cal.btn.down': 'PNG 다운로드',
+    'cal.empty': '생성 후 미리보기가 표시됩니다',
+    'al.uploadFirst': '{0} 번째 이미지를 먼저 업로드하세요',
+    'al.notImage': '선택한 파일이 이미지가 아닙니다',
+    'al.fileLoadFail': '다음 파일 로드 실패:\n{0}',
+    'al.genFirst': '4 단계에서 먼저 1 장 이상 생성하세요',
+    'al.sizeMismatch': '큐에 다른 픽셀 크기 이미지가 있어 같은 용지에 배치할 수 없습니다',
+    'al.noPiece': '면 부착할 이미지가 없습니다',
+    'al.tooBig': '캔버스 {0} × {1}이 브라우저 한계 초과.\n1 단계 DPI를 600 또는 1200으로 낮추고 재생성 후 다시 시도하세요.',
+    'al.layoutFail': '생성 실패: {0}\n\n주로 DPI 과다. 1 단계 DPI를 600 또는 1200으로 변경하고 재시도.',
+    'al.clearQueue': '큐 전체를 비우시겠습니까?',
+    'al.toBlobNull': 'toBlob이 null 반환(캔버스 너무 큼)',
+    'al.canvasLimited': '브라우저가 캔버스 크기 제한(실제 {0} × {1}), DPI 너무 높음',
+    'in.outSize': '출력: <code>{0} × {1}</code> px · 물리 {2} × {3} cm @ {4} DPI',
+    'in.cutSize': '재단 크기: <code>{0} × {1}</code> px · {2} × {3} cm',
+    'in.bleedOut': '<strong>재단 여백 포함</strong>: <code>{0} × {1}</code> px · {2} × {3} cm(각 변 {4} mm) @ {5} DPI',
+    'in.lensDetail': '렌즈 주기: <code>{0}</code> px · 이미지당 띠 너비: <code>{1}</code> px · 총 렌즈 수: <code>{2}</code>',
+    'in.warnStrip': '⚠ 이미지당 2 px 미만. 흐려집니다. DPI를 높이거나 변환 수를 줄이세요.',
+    'in.warnNonInt': '힌트: DPI/LPI = <code>{0}</code>은 정수가 아님. 부동소수로 정확 슬라이스(정상). 정수 정렬 원하면 DPI를 LPI의 정수 배로(예: {1} DPI).',
+    'in.calRange': '범위: <code>{0} ~ {1} LPI</code>, 간격 <code>{2}</code>, 총 <code>{3}</code> 행<br>출력 <code>{4} × {5}</code> px · {6} × {7} cm @ {8} DPI',
+    'in.layoutNoQueue': '아래 큐에 이미지 추가(4 단계 생성 후 "+ 면 부착 큐에 추가" 또는 "+ 이미지 업로드"로 PC에서 PNG/JPG 선택)',
+    'in.layoutMismatch': '⚠ 큐에 다른 픽셀 크기 이미지(DPI / 재단 / 물리 크기 다름)가 있어 같은 용지에 배치 불가. 불일치 항목 삭제 필요.',
+    'in.layoutNoFit': '⚠ 현재 용지와 여백으로는 1 장도 들어가지 않습니다. 여백을 줄이거나 더 큰 용지 사용.',
+    'in.layoutCapacity': '용지 용량 <strong>{0} × {1} = {2}</strong> 장({3}) · 픽셀 <code>{4} × {5}</code> @ {6} DPI · 메모리 {7} MB',
+    'in.queueZero': '⚠ 큐의 모든 항목 수량이 0. 수량을 늘리거나 항목을 삭제하세요.',
+    'in.queueOver': '⚠ 큐는 {0} 장 필요하지만 용지 용량은 {1}. 초과 {2} 장은 배치되지 않습니다.',
+    'in.queueUnder': '큐 {0} 장 < 용량 {1}, 남은 자리는 비워집니다.',
+    'in.queueExact': '큐 {0} 장 = 용량 {1}, 정확히 채워집니다.',
+    'in.singleMode': '단일 모드: 4 단계의 현재 이미지로 {0} 자리 채우기.',
+    'in.tooBig': '⚠ 픽셀이 브라우저 캔버스 한계 초과(한 변 {0} / 총 면적 2.68 억). 1 단계 DPI를 <strong>{1} 이하</strong>로 낮추고 재생성하세요.',
+    'in.heavy': '⚠ 메모리 약 {0} MB, 생성이 느려집니다. 1 단계에서 600~1200 DPI 권장.',
+    'in.orient.portrait': '세로',
+    'in.orient.landscape': '가로',
+    'qi.delete': '큐에서 이 종류 삭제',
+    'tt.editTabRemove': '조정됨',
+    'tt.layoutClickRemove': '클릭하여 큐에서 1 장 제거',
+    'help.body': `
+      <h3>1 단계: LPI 보정 먼저 (적극 권장)</h3>
+      <ol>
+        <li>"LPI 보정" 탭으로 전환, 시트 공칭값으로 중심 LPI 설정 (예: 50 또는 75)</li>
+        <li>"보정 이미지 생성" 클릭, PNG 다운로드</li>
+        <li>프린터로 <strong>실제 크기</strong> 인쇄 (핵심: "페이지에 맞춤"이 아닌 "실제 크기" 또는 "100%" 선택)</li>
+        <li>렌티큘러 시트를 인쇄물 위에 정렬해 올림. 렌즈선이 테스트 선과 평행이어야 함</li>
+        <li>약간 기울이며 관찰, 가장 균일한 회색 (무지개/물결 무늬 없음) 행을 찾음</li>
+        <li>그 행 옆에 적힌 LPI 값을 기록 (예: 49.8 또는 75.2)</li>
+      </ol>
+      <h3>2 단계: 인터레이스 이미지 생성</h3>
+      <ol>
+        <li>"생성" 탭으로 돌아감</li>
+        <li>LPI를 "사용자 지정"으로 설정, 보정값 입력 (보정 안 하면 50 / 75 선택)</li>
+        <li>DPI는 프린터 실제 해상도. 가정용 잉크젯 보통 600, 레이저 600 또는 1200, 사진 프린터 최대 1440 / 2400</li>
+        <li>이미지 수 2 또는 3. <strong>3 변은 부드럽지만 이미지당 해상도가 1/3 줄어듭니다. 선명한 소스 필요</strong></li>
+        <li>출력 크기: 8.6 × 5.4 cm 기본</li>
+        <li>렌즈 방향: 시트를 들고 렌즈선이 수직이면 "세로", 수평이면 "가로". <strong>모르면 둘 다 시도</strong></li>
+        <li>2 / 3 장 업로드. 순서: 기울이며 보일 순서, 예: 3 변 = "좌시점 / 정면 / 우시점"</li>
+        <li>"패턴 생성" → PNG 다운로드</li>
+      </ol>
+      <h3>3 단계: 인쇄</h3>
+      <div class="tip"><strong>핵심: 인쇄는 반드시 "실제 크기 / 100% / 배율 없음", "페이지에 맞춤" 절대 금지.</strong> 안 그러면 픽셀이 어긋나 모든 렌즈가 안 맞고 입체 효과가 망가집니다.</div>
+      <ul>
+        <li>내보낸 PNG에 DPI 메타데이터 포함, 대부분 소프트웨어(Photoshop, Acrobat, IrfanView)가 자동 실제 크기 배치</li>
+        <li>프린터는 최고 품질 / 사진 모드</li>
+        <li>용지: 사진용지 또는 두꺼운 잉크젯 용지 권장. 일반지는 잉크 번짐으로 줄무늬 흐려짐</li>
+        <li>인쇄 후 크기 측정: 정확히 8.6 × 5.4 cm여야 함. 몇 mm 차이도 재인쇄</li>
+      </ul>
+      <h3>4 단계: 부착</h3>
+      <ol>
+        <li>인쇄지를 시트 크기에 맞춰 자름</li>
+        <li>시트의 매끄러운(렌즈) 면이 바깥쪽, 평평한 면이 인쇄면 향함</li>
+        <li>모서리 정렬, 소량 풀이나 양면테이프로 고정 (중앙엔 풀 금지)</li>
+        <li>각도를 바꿔보면 이미지 전환이 보여야 함</li>
+      </ol>
+      <h3>소스 이미지 준비</h3>
+      <ul>
+        <li><strong>2 변 (2 장 전환)</strong>: 관련 있는 두 이미지, 예: 두 표정, 낮/밤, 변신 전후</li>
+        <li><strong>3 변 (3 장 순차)</strong>: 연속 동작 3 프레임 또는 좌/정/우 3 시점 (기본적인 "3D" 효과)</li>
+        <li>모든 이미지 8.6:5.4 ≈ 16:10 비율 권장, 불일치 시 가운데 자르기</li>
+        <li>해상도는 높을수록 좋음, 최소 최종 출력 픽셀 수 이상</li>
+      </ul>
+      <h3>FAQ</h3>
+      <ul>
+        <li><strong>전체 무지개 줄무늬</strong>: LPI 안 맞음, 재보정</li>
+        <li><strong>이미지 잔상/이중상</strong>: 렌즈 방향 잘못 또는 부착 시 회전</li>
+        <li><strong>전환이 선명하지 않고 중간 보임</strong>: 정상, 렌티큘러에는 전환 영역이 있음</li>
+        <li><strong>색이 회색/어두움</strong>: 원본 이미지 채도 약간 높여서 사용</li>
+        <li><strong>3 변 중앙 안 보임</strong>: 관찰 각도 잘못 또는 시트가 2 변 전용</li>
+      </ul>
+      <h3>가로세로비와 크기</h3>
+      <p>구입한 시트는 8.6 × 5.4 cm. 더 큰 용지에 여러 장 배치하려면 이미지 편집 소프트웨어로 생성된 PNG를 A4에 각 8.6 × 5.4 cm 그대로 배열. <strong>배치 시 크기 변경 금지</strong>.</p>
+    `,
+  },
+  'fr': {
+    'app.title': 'Générateur de motifs lenticulaires',
+    'app.subtitle': 'Génère des motifs entrelacés prêts à imprimer pour feuilles lenticulaires LPI (3D / 2-flip / 3-flip)',
+    'nav.interlace': '① Générer',
+    'nav.calibration': '② Calibrage LPI',
+    'nav.help': 'Aide',
+    'common.custom': 'Personnalisé...',
+    'common.cancel': 'Annuler',
+    'common.apply': 'Appliquer',
+    'common.confirm': 'OK',
+    's1.head': '1. Paramètres',
+    's1.lpi': 'LPI lenticulaire (lignes/pouce)',
+    's1.lpiCustom': 'LPI personnalisé',
+    's1.dpi': 'DPI d\'impression',
+    's1.numImg': 'Variantes',
+    's1.var2': '2-flip (2 images)',
+    's1.var3': '3-flip (3 images)',
+    's1.size': 'Taille cm (L × H)',
+    's1.orient': 'Direction des lentilles',
+    's1.vert': 'Vertical (basculement gauche/droite)',
+    's1.horiz': 'Horizontal (basculement haut/bas)',
+    's1.bg': 'Fond (remplir transparent)',
+    's1.transparent': 'Garder transparent (PNG transparent)',
+    's1.bleed': 'Ajouter fond perdu',
+    's1.bleedW': 'Largeur fond perdu (mm, par côté)',
+    's1.cutMarks': 'Ajouter repères de coupe (4 coins en L, retirés au massicotage)',
+    's2.head': '2. Sélectionner les images',
+    's2.hint': 'L\'ordre compte : lors du basculement gauche→droite (ou haut→bas), la 1re image apparaît en premier. Cliquez pour téléverser ou glissez les images ici.',
+    's2.lab.left': '1re (Vue gauche)',
+    's2.lab.right': '2e (Vue droite)',
+    's2.lab.start': '1re (Gauche/Début)',
+    's2.lab.middle': '2e (Milieu)',
+    's2.lab.end': '3e (Droite/Fin)',
+    's2.tap': 'Cliquer ou déposer une image',
+    's3.head': '3. Ajuster taille, rotation, position (optionnel)',
+    's3.hint': 'Chaque image est par défaut « couverture » (recadrage centré). Cliquez sur un onglet ci-dessous pour changer l\'image éditée ; l\'éditeur peut superposer d\'autres images comme référence d\'alignement. <strong>Modifications enregistrées instantanément</strong> ; cliquez « Couvrir » pour réinitialiser.',
+    's3.empty': 'Veuillez d\'abord téléverser des images à l\'étape 2',
+    's3.tab': 'Image {0}',
+    's3.notUploaded': 'non téléversée',
+    's3.editorHint': 'Toute la zone = <strong>sortie</strong>. <strong>Glisser</strong> pour déplacer · <strong>Molette</strong> pour zoomer',
+    'ed.rotL': '↺ 90°',
+    'ed.rotR': '↻ 90°',
+    'ed.zoom': 'Zoom',
+    'ed.fit': 'Couvrir',
+    'ed.crop': '✂ Recadrer',
+    'ed.overlay': 'Comparer avec :',
+    'ed.opacity': 'Opacité',
+    'crop.help': '<strong>Mode recadrage</strong> : glisser les coins pour redimensionner · glisser à l\'intérieur pour déplacer · zone extérieure ignorée',
+    'crop.clear': 'Annuler recadrage',
+    's4.head': '4. Générer et télécharger',
+    's4.btn.gen': 'Générer le motif',
+    's4.btn.down': 'Télécharger PNG',
+    's4.btn.add': '+ Ajouter à la file',
+    's4.btn.addTitle': 'Enregistrer le motif actuel dans la file. Vous pouvez en ajouter d\'autres ensuite.',
+    's4.statusGen': '✓ Généré',
+    's4.statusProc': 'Traitement...',
+    's4.previewEmpty': 'L\'aperçu apparaîtra ici',
+    's5.head': '5. Imposition A4 / A3 (optionnel)',
+    's5.hint': 'Choisissez d\'abord le format papier, puis ajoutez des images à la file ci-dessous : depuis l\'étape 4 « + Ajouter à la file », ou « + Téléverser » pour PNG depuis le PC. <br>L\'ajout d\'éléments répartit automatiquement la quantité (plein → moitié → tiers ...) ; vous pouvez ajuster ensuite.',
+    's5.paperSize': 'Format papier',
+    's5.paperOrient': 'Orientation',
+    's5.po.auto': 'Auto (le plus possible)',
+    's5.po.portrait': 'Portrait',
+    's5.po.landscape': 'Paysage',
+    's5.paperMargin': 'Marge papier (mm)',
+    's5.paperSpacing': 'Espacement (mm)',
+    's5.paperCustom': 'Personnalisé mm (court × long)',
+    's5.queueHead': 'File d\'imposition',
+    's5.queueEmpty': '(vide)',
+    's5.queueSummary': '({0} types · {1} pcs au total)',
+    's5.queueUpload': '+ Téléverser des images',
+    's5.queueClear': 'Vider la file',
+    's5.queueEmptyHint': 'File vide.<br>① Générer à l\'étape 4 puis cliquer « + Ajouter à la file »<br>② Ou cliquer « + Téléverser des images » ci-dessus pour PNG/JPG (multi-sélection et glisser-déposer)',
+    's5.btn.gen': 'Générer la planche',
+    's5.btn.down': 'Télécharger PNG',
+    's5.layoutEmpty': 'L\'aperçu apparaîtra ici',
+    's5.unitName.from3': '{0}×{1}cm · {2}LPI · {3}-flip',
+    's5.unitName.upload': 'Téléversé · {0} · {1}×{2}px',
+    's5.itemPrefix': 'Lot {0}',
+    'cal.head': 'Test de calibrage LPI',
+    'cal.intro': 'Les feuilles lenticulaires réelles s\'écartent généralement de ±0.3 ~ ±1.0 du LPI nominal. Imprimez ce test, posez la feuille dessus, observez : <strong>la ligne au gris le plus uniforme (sans bandes arc-en-ciel/moiré) indique le vrai LPI</strong>. Saisissez cette valeur en LPI personnalisé à l\'étape 1.',
+    'cal.center': 'LPI central',
+    'cal.step': 'Pas (par ligne)',
+    'cal.count': 'Lignes (impair)',
+    'cal.dpi': 'DPI d\'impression',
+    'cal.size': 'Taille cm (L × H)',
+    'cal.orient': 'Direction des lentilles',
+    'cal.vertCal': 'Vertical (lignes verticales)',
+    'cal.horizCal': 'Horizontal (lignes horizontales)',
+    'cal.btn.gen': 'Générer le calibrage',
+    'cal.btn.down': 'Télécharger PNG',
+    'cal.empty': 'L\'aperçu apparaîtra ici',
+    'al.uploadFirst': 'Veuillez d\'abord téléverser l\'image n°{0}',
+    'al.notImage': 'Les fichiers sélectionnés ne sont pas des images',
+    'al.fileLoadFail': 'Échec de chargement :\n{0}',
+    'al.genFirst': 'Générez d\'abord au moins une image à l\'étape 4',
+    'al.sizeMismatch': 'La file contient des images de tailles différentes ; ne peuvent être imposées sur la même feuille',
+    'al.noPiece': 'Aucune image à imposer',
+    'al.tooBig': 'Toile {0} × {1} dépasse la limite navigateur.\nRéduisez le DPI à 600 ou 1200 à l\'étape 1, regénérez puis réessayez.',
+    'al.layoutFail': 'Échec : {0}\n\nGénéralement DPI trop élevé. Définissez DPI à 600 ou 1200 à l\'étape 1.',
+    'al.clearQueue': 'Vider toute la file ?',
+    'al.toBlobNull': 'toBlob a retourné null (toile trop grande)',
+    'al.canvasLimited': 'Taille de toile limitée par le navigateur (réelle {0} × {1}) ; DPI trop élevé',
+    'in.outSize': 'Sortie : <code>{0} × {1}</code> px · physique {2} × {3} cm @ {4} DPI',
+    'in.cutSize': 'Taille rognée : <code>{0} × {1}</code> px · {2} × {3} cm',
+    'in.bleedOut': '<strong>Avec fond perdu</strong> : <code>{0} × {1}</code> px · {2} × {3} cm ({4} mm/côté) @ {5} DPI',
+    'in.lensDetail': 'Période lentille : <code>{0}</code> px · Bande/image : <code>{1}</code> px · Total lentilles : <code>{2}</code>',
+    'in.warnStrip': '⚠ Moins de 2 px par bande/image ; flou. Augmentez le DPI ou réduisez les variantes.',
+    'in.warnNonInt': 'Note : DPI/LPI = <code>{0}</code> non entier ; découpe en flottants (normal). Pour alignement entier, DPI multiple de LPI (ex. {1} DPI).',
+    'in.calRange': 'Plage : <code>{0} ~ {1} LPI</code>, pas <code>{2}</code>, total <code>{3}</code> lignes<br>Sortie <code>{4} × {5}</code> px · {6} × {7} cm @ {8} DPI',
+    'in.layoutNoQueue': 'Ajoutez des images à la file (étape 4 « + Ajouter à la file » ou « + Téléverser des images » pour PNG/JPG)',
+    'in.layoutMismatch': '⚠ La file contient des images de tailles différentes (DPI / fond perdu / taille physique) ; impossible. Supprimez les éléments incohérents.',
+    'in.layoutNoFit': '⚠ Aucune image ne tient avec ce papier et marge ; réduisez la marge ou utilisez papier plus grand',
+    'in.layoutCapacity': 'Capacité <strong>{0} × {1} = {2}</strong> pcs ({3}) · pixels <code>{4} × {5}</code> @ {6} DPI · mémoire {7} Mo',
+    'in.queueZero': '⚠ Toutes les quantités sont à 0 ; augmentez ou supprimez.',
+    'in.queueOver': '⚠ La file demande {0} pcs mais le papier en contient {1} ; les {2} en surplus ne seront pas placées.',
+    'in.queueUnder': 'File {0} pcs < capacité {1} ; emplacements restants vides.',
+    'in.queueExact': 'File {0} pcs = capacité {1} ; remplit parfaitement.',
+    'in.singleMode': 'Mode simple : remplir {0} positions avec la sortie actuelle de l\'étape 4.',
+    'in.tooBig': '⚠ Pixels dépassent limite navigateur (côté max {0} / surface max 268M). Réduisez DPI à <strong>{1} ou moins</strong> à l\'étape 1.',
+    'in.heavy': '⚠ Mémoire ~{0} Mo ; lent. 600~1200 DPI recommandé à l\'étape 1.',
+    'in.orient.portrait': 'portrait',
+    'in.orient.landscape': 'paysage',
+    'qi.delete': 'Retirer ce type de la file',
+    'tt.editTabRemove': 'modifié',
+    'tt.layoutClickRemove': 'Cliquer sur une pièce pour en retirer une de la file',
+    'help.body': `
+      <h3>Étape 1 : calibrage LPI (fortement recommandé)</h3>
+      <ol>
+        <li>Aller à l'onglet « Calibrage LPI » et régler le LPI central sur la valeur nominale de votre feuille (par ex. 50 ou 75)</li>
+        <li>Cliquer « Générer le calibrage » et télécharger le PNG</li>
+        <li>Imprimer en <strong>taille réelle</strong> (clé : NE PAS utiliser « ajuster à la page » — choisir « taille réelle » ou « 100% »)</li>
+        <li>Poser la feuille lenticulaire sur l'impression. Les lignes des lentilles doivent être parallèles aux bandes de test</li>
+        <li>Incliner légèrement et observer — trouver la ligne au gris le plus uniforme (sans motifs arc-en-ciel/ondulés)</li>
+        <li>Noter la valeur LPI à côté de cette ligne (par ex. 49,8 ou 75,2)</li>
+      </ol>
+      <h3>Étape 2 : générer le motif entrelacé</h3>
+      <ol>
+        <li>Retourner à l'onglet « Générer »</li>
+        <li>Régler LPI sur « Personnalisé » et entrer la valeur calibrée (ou simplement 50/75 si vous sautez le calibrage)</li>
+        <li>DPI = résolution réelle de votre imprimante. Jet d'encre maison : 600, laser : 600 ou 1200, imprimante photo : 1440/2400</li>
+        <li>2 ou 3 variantes. <strong>3-flip est plus fluide mais chaque image reçoit 1/3 de pixels en moins — sources nettes nécessaires</strong></li>
+        <li>Taille : 8,6 × 5,4 cm par défaut</li>
+        <li>Direction des lentilles : tenir la feuille — si lignes verticales choisir « Vertical », si horizontales « Horizontal ». <strong>En cas de doute, générer les deux</strong></li>
+        <li>Téléverser 2 / 3 images. Ordre : selon l'ordre de basculement. Pour 3-flip : « vue gauche / vue avant / vue droite »</li>
+        <li>Cliquer « Générer le motif » et télécharger le PNG</li>
+      </ol>
+      <h3>Étape 3 : impression</h3>
+      <div class="tip"><strong>Critique : imprimer en « taille réelle / 100% / sans mise à l'échelle » — jamais « ajuster à la page ».</strong> Sinon les pixels glissent, chaque lentille est désalignée et l'effet 3D est perdu.</div>
+      <ul>
+        <li>Le PNG exporté embarque les métadonnées DPI ; la plupart des logiciels (Photoshop, Acrobat, IrfanView) les respectent</li>
+        <li>Mode meilleure qualité / photo</li>
+        <li>Papier : photo ou jet d'encre épais. Le papier ordinaire diffuse l'encre et brouille les bandes</li>
+        <li>Mesurer l'impression : doit faire exactement 8,6 × 5,4 cm — quelques mm de différence et il faut réimprimer</li>
+      </ul>
+      <h3>Étape 4 : assemblage</h3>
+      <ol>
+        <li>Massicoter l'impression à la taille de la feuille</li>
+        <li>Côté lentille vers l'extérieur (face texturée), côté plat vers l'image</li>
+        <li>Aligner les coins ; fixer avec très peu de colle ou ruban double-face (éviter le centre)</li>
+        <li>Incliner pour voir le basculement entre images</li>
+      </ol>
+      <h3>Préparation des sources</h3>
+      <ul>
+        <li><strong>2-flip (deux images)</strong> : toute paire, ex. deux expressions, jour/nuit, avant/après</li>
+        <li><strong>3-flip (trois images)</strong> : 3 trames d'animation, ou vues gauche/centre/droite d'un objet (effet « 3D » de base)</li>
+        <li>Ratio ~8,6:5,4 ≈ 16:10 recommandé ; sinon recadrage centré</li>
+        <li>Plus haute résolution = mieux, au minimum la résolution de sortie</li>
+      </ul>
+      <h3>FAQ</h3>
+      <ul>
+        <li><strong>Motif arc-en-ciel partout</strong> : LPI incorrect — recalibrer</li>
+        <li><strong>Image fantôme/double</strong> : direction des lentilles erronée ou rotation lors du collage</li>
+        <li><strong>Transitions douces visibles</strong> : normal — les lenticulaires ont une zone de transition</li>
+        <li><strong>Couleurs grises/ternes</strong> : augmenter la saturation des sources</li>
+        <li><strong>Image centrale invisible en 3-flip</strong> : angle d'observation incorrect ou feuille 2-flip uniquement</li>
+      </ul>
+      <h3>Sur les ratios et tailles</h3>
+      <p>Votre feuille mesure 8,6 × 5,4 cm. Pour en placer plusieurs sur une feuille plus grande, disposez les PNG sur un A4 en gardant chacun à exactement 8,6 × 5,4 cm — <strong>aucune mise à l'échelle pendant la mise en page</strong>.</p>
+    `,
+  },
+  'th': {
+    'app.title': 'เครื่องสร้างลายพิมพ์เลนติคูลาร์',
+    'app.subtitle': 'สร้างลายพิมพ์อินเทอร์เลซสำหรับแผ่นเลนติคูลาร์ LPI (3D / 2 ภาพ / 3 ภาพ)',
+    'nav.interlace': '① สร้าง',
+    'nav.calibration': '② ปรับเทียบ LPI',
+    'nav.help': 'วิธีใช้',
+    'common.custom': 'กำหนดเอง...',
+    'common.cancel': 'ยกเลิก',
+    'common.apply': 'ตกลง',
+    'common.confirm': 'ตกลง',
+    's1.head': '1. ตั้งค่า',
+    's1.lpi': 'LPI เลนติคูลาร์ (เส้น/นิ้ว)',
+    's1.lpiCustom': 'LPI กำหนดเอง',
+    's1.dpi': 'DPI การพิมพ์',
+    's1.numImg': 'จำนวนภาพ',
+    's1.var2': '2 ภาพ',
+    's1.var3': '3 ภาพ',
+    's1.size': 'ขนาด ซม. (กว้าง × สูง)',
+    's1.orient': 'ทิศทางเลนส์',
+    's1.vert': 'แนวตั้ง (สลับซ้ายขวา)',
+    's1.horiz': 'แนวนอน (สลับบนล่าง)',
+    's1.bg': 'สีพื้นหลัง (เติมส่วนโปร่งใส)',
+    's1.transparent': 'รักษาความโปร่งใส (PNG โปร่งใส)',
+    's1.bleed': 'เพิ่มระยะตัดตก',
+    's1.bleedW': 'ระยะตัดตก (มม. ต่อด้าน)',
+    's1.cutMarks': 'เพิ่มเครื่องหมายตัด (4 มุมรูป L ตัดออกแล้วหายไป)',
+    's2.head': '2. เลือกภาพ',
+    's2.hint': 'ลำดับสำคัญ: เมื่อสลับซ้าย→ขวา (หรือบน→ล่าง) ภาพแรกจะเห็นก่อน คลิกเพื่ออัปโหลดหรือลากภาพมา',
+    's2.lab.left': 'ภาพ 1 (มุมซ้าย)',
+    's2.lab.right': 'ภาพ 2 (มุมขวา)',
+    's2.lab.start': 'ภาพ 1 (ซ้าย/เริ่ม)',
+    's2.lab.middle': 'ภาพ 2 (กลาง)',
+    's2.lab.end': 'ภาพ 3 (ขวา/จบ)',
+    's2.tap': 'คลิกหรือลากภาพมาวาง',
+    's3.head': '3. ปรับขนาด หมุน ตำแหน่ง (ไม่บังคับ)',
+    's3.hint': 'แต่ละภาพถูกตั้งให้ "เต็มพื้นที่" (ครอบกึ่งกลาง) คลิกแท็บด้านล่างเพื่อสลับภาพที่จะแก้ไข ตัวแก้ไขสามารถซ้อนภาพอื่นเพื่ออ้างอิงการจัดตำแหน่ง <strong>การเปลี่ยนแปลงบันทึกทันที</strong> กด "เต็มพื้นที่" เพื่อกลับค่าเริ่มต้น',
+    's3.empty': 'โปรดอัปโหลดภาพในขั้นตอนที่ 2 ก่อน แล้วกลับมาที่นี่',
+    's3.tab': 'ภาพ {0}',
+    's3.notUploaded': 'ยังไม่อัปโหลด',
+    's3.editorHint': 'แคนวาสทั้งหมด = <strong>พื้นที่เอาต์พุต</strong> <strong>ลาก</strong>เพื่อย้าย · <strong>เลื่อน</strong>เพื่อซูม',
+    'ed.rotL': '↺ 90°',
+    'ed.rotR': '↻ 90°',
+    'ed.zoom': 'ซูม',
+    'ed.fit': 'เต็มพื้นที่',
+    'ed.crop': '✂ ครอป',
+    'ed.overlay': 'เปรียบเทียบกับ:',
+    'ed.opacity': 'ความทึบ',
+    'crop.help': '<strong>โหมดครอป</strong>: ลาก 4 มุมเพื่อปรับขนาด · ลากภายในเพื่อย้าย · ส่วนนอกจะถูกตัดออก',
+    'crop.clear': 'ล้างการครอป',
+    's4.head': '4. สร้างและดาวน์โหลด',
+    's4.btn.gen': 'สร้างลาย',
+    's4.btn.down': 'ดาวน์โหลด PNG',
+    's4.btn.add': '+ เพิ่มในคิวจัดหน้า',
+    's4.btn.addTitle': 'บันทึกลายปัจจุบันลงคิว เปลี่ยนภาพแล้วเพิ่มอีกได้',
+    's4.statusGen': '✓ สร้างแล้ว',
+    's4.statusProc': 'กำลังประมวลผล...',
+    's4.previewEmpty': 'ตัวอย่างจะปรากฏที่นี่หลังสร้าง',
+    's5.head': '5. จัดหน้าเป็น A4 / A3 (ไม่บังคับ)',
+    's5.hint': 'เลือกขนาดกระดาษก่อน แล้วเพิ่มภาพในคิวด้านล่าง: จากขั้น 4 "+ เพิ่มในคิวจัดหน้า" หรือ "+ อัปโหลดภาพ" PNG จากเครื่อง <br>เพิ่มรายการใหม่จะกระจายจำนวนเท่าๆ กัน (เต็ม → ครึ่ง → 1/3 ...) ปรับเองได้ภายหลัง',
+    's5.paperSize': 'ขนาดกระดาษ',
+    's5.paperOrient': 'แนวกระดาษ',
+    's5.po.auto': 'อัตโนมัติ (มากที่สุด)',
+    's5.po.portrait': 'แนวตั้ง',
+    's5.po.landscape': 'แนวนอน',
+    's5.paperMargin': 'ขอบกระดาษ (มม.)',
+    's5.paperSpacing': 'ระยะห่าง (มม.)',
+    's5.paperCustom': 'กำหนดเอง มม. (ด้านสั้น × ด้านยาว)',
+    's5.queueHead': 'คิวจัดหน้า',
+    's5.queueEmpty': '(ว่าง)',
+    's5.queueSummary': '({0} ชนิด · รวม {1} ชิ้น)',
+    's5.queueUpload': '+ อัปโหลดภาพ',
+    's5.queueClear': 'ล้างคิว',
+    's5.queueEmptyHint': 'คิวว่าง<br>① สร้างในขั้น 4 แล้วคลิก "+ เพิ่มในคิวจัดหน้า"<br>② หรือคลิก "+ อัปโหลดภาพ" ด้านบนเลือก PNG / JPG (รองรับหลายไฟล์/ลากวาง)',
+    's5.btn.gen': 'สร้างหน้าจัดเรียง',
+    's5.btn.down': 'ดาวน์โหลด PNG',
+    's5.layoutEmpty': 'ตัวอย่างจะปรากฏที่นี่หลังสร้าง',
+    's5.unitName.from3': '{0}×{1}ซม. · {2}LPI · {3} ภาพ',
+    's5.unitName.upload': 'อัปโหลด · {0} · {1}×{2}px',
+    's5.itemPrefix': 'ชุดที่ {0}',
+    'cal.head': 'ทดสอบปรับเทียบ LPI',
+    'cal.intro': 'แผ่นเลนติคูลาร์จริงมักเบี่ยง ±0.3 ~ ±1.0 จาก LPI ที่ระบุ พิมพ์ทดสอบนี้แล้ววางแผ่นทับ สังเกต: <strong>แถวที่เทาเรียบสม่ำเสมอที่สุด (ไม่มีแถบสีรุ้ง/มอเร่) คือ LPI จริง</strong> นำค่านั้นใส่ "LPI กำหนดเอง" ในขั้น 1 เพื่อเอฟเฟกต์ 3D ดีที่สุด',
+    'cal.center': 'LPI กลาง',
+    'cal.step': 'สเต็ป (ต่อแถว)',
+    'cal.count': 'จำนวนแถว (เลขคี่)',
+    'cal.dpi': 'DPI การพิมพ์',
+    'cal.size': 'ขนาด ซม. (กว้าง × สูง)',
+    'cal.orient': 'ทิศทางเลนส์',
+    'cal.vertCal': 'แนวตั้ง (เส้นตั้ง)',
+    'cal.horizCal': 'แนวนอน (เส้นนอน)',
+    'cal.btn.gen': 'สร้างภาพปรับเทียบ',
+    'cal.btn.down': 'ดาวน์โหลด PNG',
+    'cal.empty': 'ตัวอย่างจะปรากฏที่นี่หลังสร้าง',
+    'al.uploadFirst': 'โปรดอัปโหลดภาพที่ {0} ก่อน',
+    'al.notImage': 'ไฟล์ที่เลือกไม่ใช่รูปภาพ',
+    'al.fileLoadFail': 'โหลดไฟล์ต่อไปนี้ไม่สำเร็จ:\n{0}',
+    'al.genFirst': 'โปรดสร้างอย่างน้อย 1 ภาพในขั้น 4 ก่อน',
+    'al.sizeMismatch': 'คิวมีภาพขนาดพิกเซลต่างกัน ไม่สามารถจัดบนกระดาษเดียวกัน',
+    'al.noPiece': 'ไม่มีภาพให้จัด',
+    'al.tooBig': 'แคนวาส {0} × {1} เกินขีดจำกัดเบราว์เซอร์\nลดค่า DPI ในขั้น 1 เป็น 600 หรือ 1200 แล้วสร้างใหม่',
+    'al.layoutFail': 'สร้างล้มเหลว: {0}\n\nสาเหตุปกติ: DPI สูงเกิน ปรับ DPI เป็น 600 หรือ 1200 ในขั้น 1',
+    'al.clearQueue': 'ล้างคิวทั้งหมด?',
+    'al.toBlobNull': 'toBlob คืน null (แคนวาสใหญ่เกิน)',
+    'al.canvasLimited': 'ขนาดแคนวาสถูกจำกัดโดยเบราว์เซอร์ (จริง {0} × {1}) DPI สูงเกิน',
+    'in.outSize': 'เอาต์พุต: <code>{0} × {1}</code> px · ฟิสิคัล {2} × {3} ซม. @ {4} DPI',
+    'in.cutSize': 'ขนาดตัด: <code>{0} × {1}</code> px · {2} × {3} ซม.',
+    'in.bleedOut': '<strong>รวมตัดตก</strong>: <code>{0} × {1}</code> px · {2} × {3} ซม. (ด้านละ {4} มม.) @ {5} DPI',
+    'in.lensDetail': 'คาบเลนส์: <code>{0}</code> px · แถบต่อภาพ: <code>{1}</code> px · เลนส์รวม: <code>{2}</code>',
+    'in.warnStrip': '⚠ ภาพละน้อยกว่า 2 px จะมัว เพิ่ม DPI หรือลดจำนวนภาพ',
+    'in.warnNonInt': 'หมายเหตุ: DPI/LPI = <code>{0}</code> ไม่เป็นจำนวนเต็ม จะใช้ float ตัด (ปกติ) ถ้าต้องการเต็มจำนวน ตั้ง DPI ให้เป็นทวีคูณของ LPI (เช่น {1} DPI)',
+    'in.calRange': 'ช่วง: <code>{0} ~ {1} LPI</code>, สเต็ป <code>{2}</code>, รวม <code>{3}</code> แถว<br>เอาต์พุต <code>{4} × {5}</code> px · {6} × {7} ซม. @ {8} DPI',
+    'in.layoutNoQueue': 'เพิ่มภาพลงคิว (สร้างในขั้น 4 แล้ว "+ เพิ่มในคิวจัดหน้า" หรือ "+ อัปโหลดภาพ" PNG/JPG จากเครื่อง)',
+    'in.layoutMismatch': '⚠ คิวมีภาพขนาดพิกเซลต่างกัน (DPI / ตัดตก / ขนาดฟิสิคัลต่าง) ไม่สามารถจัดบนกระดาษเดียวกัน ลบรายการที่ไม่ตรงกัน',
+    'in.layoutNoFit': '⚠ กระดาษและขอบปัจจุบันไม่พอใส่ 1 ชิ้น ลดขอบหรือใช้กระดาษใหญ่ขึ้น',
+    'in.layoutCapacity': 'ความจุกระดาษ <strong>{0} × {1} = {2}</strong> ชิ้น ({3}) · พิกเซล <code>{4} × {5}</code> @ {6} DPI · หน่วยความจำ {7} MB',
+    'in.queueZero': '⚠ ทุกรายการในคิวมีจำนวน 0 เพิ่มจำนวนหรือลบรายการ',
+    'in.queueOver': '⚠ คิวต้องการ {0} ชิ้น แต่กระดาษใส่ได้ {1} ส่วนเกิน {2} จะไม่ถูกวาง',
+    'in.queueUnder': 'คิว {0} ชิ้น < ความจุ {1} ตำแหน่งที่เหลือว่าง',
+    'in.queueExact': 'คิว {0} ชิ้น = ความจุ {1} เต็มพอดี',
+    'in.singleMode': 'โหมดเดี่ยว: เติม {0} ตำแหน่งด้วยภาพปัจจุบันจากขั้น 4',
+    'in.tooBig': '⚠ พิกเซลเกินขีดจำกัดแคนวาสเบราว์เซอร์ (ด้านสูงสุด {0} / พื้นที่สูงสุด 268M) ลด DPI ในขั้น 1 เป็น <strong>{1} หรือต่ำกว่า</strong>',
+    'in.heavy': '⚠ หน่วยความจำ ~{0} MB จะช้า แนะนำ 600~1200 DPI ในขั้น 1',
+    'in.orient.portrait': 'แนวตั้ง',
+    'in.orient.landscape': 'แนวนอน',
+    'qi.delete': 'ลบประเภทนี้จากคิว',
+    'tt.editTabRemove': 'ปรับแล้ว',
+    'tt.layoutClickRemove': 'คลิกชิ้นใดเพื่อลบออกจากคิว',
+    'help.body': `
+      <h3>ขั้นที่ 1: ปรับเทียบ LPI ก่อน (แนะนำอย่างยิ่ง)</h3>
+      <ol>
+        <li>สลับไปแท็บ "ปรับเทียบ LPI" ตั้งค่า LPI กลางตามค่ามาตรฐานของแผ่น (เช่น 50 หรือ 75)</li>
+        <li>คลิก "สร้างภาพปรับเทียบ" ดาวน์โหลด PNG</li>
+        <li>พิมพ์ขนาดจริง (สำคัญ: ห้าม "ปรับให้พอดีหน้า" ต้องเลือก "ขนาดจริง" หรือ "100%")</li>
+        <li>วางแผ่นเลนติคูลาร์ทับงานพิมพ์ เส้นเลนส์ต้องขนานกับเส้นทดสอบ</li>
+        <li>เอียงเล็กน้อยขณะสังเกต หาแถวที่เป็นสีเทาเรียบสม่ำเสมอที่สุด (ไม่มีลายรุ้ง/คลื่น)</li>
+        <li>จดค่า LPI ข้างแถวนั้น (เช่น 49.8 หรือ 75.2)</li>
+      </ol>
+      <h3>ขั้นที่ 2: สร้างลายอินเทอร์เลซ</h3>
+      <ol>
+        <li>กลับไปแท็บ "สร้าง"</li>
+        <li>ตั้ง LPI เป็น "กำหนดเอง" ใส่ค่าที่ปรับเทียบได้ (ถ้าไม่ปรับเทียบเลือก 50 / 75)</li>
+        <li>DPI ตามความละเอียดจริงของเครื่องพิมพ์ อิงค์เจ็ทบ้านปกติ 600 เลเซอร์ 600 หรือ 1200 เครื่องพิมพ์ภาพได้ถึง 1440 / 2400</li>
+        <li>เลือก 2 หรือ 3 ภาพ <strong>3 ภาพนุ่มนวลกว่าแต่แต่ละภาพได้พิกเซลน้อยลง 1/3 ต้องใช้ภาพต้นฉบับคมชัด</strong></li>
+        <li>ขนาด: 8.6 × 5.4 ซม. เป็นค่าเริ่มต้น</li>
+        <li>ทิศเลนส์: ถือแผ่นดู ถ้าเส้นเลนส์ตั้งฉากเลือก "แนวตั้ง" ถ้าแนวนอนเลือก "แนวนอน" <strong>ถ้าไม่แน่ใจสร้างทั้งสองแบบ</strong></li>
+        <li>อัปโหลด 2 / 3 ภาพ ลำดับ: ตามที่เห็นเมื่อเอียง 3 ภาพ = "มุมซ้าย / มุมหน้า / มุมขวา"</li>
+        <li>คลิก "สร้างลาย" ดาวน์โหลด PNG</li>
+      </ol>
+      <h3>ขั้นที่ 3: พิมพ์</h3>
+      <div class="tip"><strong>สำคัญ: พิมพ์ "ขนาดจริง / 100% / ไม่ย่อขยาย" ห้าม "ปรับให้พอดีหน้า" เด็ดขาด</strong> มิฉะนั้นพิกเซลเลื่อนไปไม่กี่จุด เลนส์ทุกอันจะเหลื่อม เอฟเฟกต์ 3D เสีย</div>
+      <ul>
+        <li>PNG ที่ส่งออกมีข้อมูล DPI ฝังอยู่ ซอฟต์แวร์ส่วนใหญ่ (Photoshop, Acrobat, IrfanView) จะใช้ขนาดจริงอัตโนมัติ</li>
+        <li>เครื่องพิมพ์เลือกคุณภาพสูงสุด / โหมดภาพถ่าย</li>
+        <li>กระดาษ: กระดาษภาพถ่ายหรือกระดาษอิงค์เจ็ทหนา กระดาษธรรมดาหมึกซึมทำให้แถบเบลอ</li>
+        <li>วัดงานพิมพ์: ต้อง 8.6 × 5.4 ซม. เป๊ะ คลาดเคลื่อนไม่กี่ มม. ก็ต้องพิมพ์ใหม่</li>
+      </ul>
+      <h3>ขั้นที่ 4: ประกอบ</h3>
+      <ol>
+        <li>ตัดงานพิมพ์ให้ขนาดเท่าแผ่นเลนติคูลาร์</li>
+        <li>ด้านเลนส์ของแผ่นออกข้างนอก (ด้านนูนมีเส้น) ด้านเรียบหันเข้าภาพ</li>
+        <li>จัดมุมให้ตรง ติดด้วยกาวหรือเทปสองหน้านิดเดียว (ห้ามตรงกลาง)</li>
+        <li>เอียงดู ควรเห็นภาพสลับ</li>
+      </ol>
+      <h3>การเตรียมภาพต้นฉบับ</h3>
+      <ul>
+        <li><strong>2 ภาพ (สลับซ้าย/ขวา)</strong>: ภาพคู่ใดก็ได้ เช่น สีหน้าสองแบบ กลางวัน/กลางคืน ก่อน/หลังการเปลี่ยน</li>
+        <li><strong>3 ภาพ (สลับตามลำดับ)</strong>: 3 เฟรมการเคลื่อนไหว หรือมุมซ้าย/กลาง/ขวาของวัตถุ (เอฟเฟกต์ "3D" พื้นฐาน)</li>
+        <li>แนะนำสัดส่วน ~8.6:5.4 ≈ 16:10 ไม่ตรงจะถูกครอปกึ่งกลาง</li>
+        <li>ความละเอียดยิ่งสูงยิ่งดี อย่างน้อยเท่ากับพิกเซลเอาต์พุตสุดท้าย</li>
+      </ul>
+      <h3>คำถามที่พบบ่อย</h3>
+      <ul>
+        <li><strong>เห็นลายรุ้งทั่วไปหมด</strong>: LPI ไม่ตรง กลับไปปรับเทียบ</li>
+        <li><strong>ภาพเป็นเงาซ้อน</strong>: ทิศเลนส์ผิด หรือหมุนตอนติด</li>
+        <li><strong>การสลับไม่ชัดเจน เห็นช่วงกลาง</strong>: ปกติ แผ่นเลนติคูลาร์มีช่วงเปลี่ยนผ่าน</li>
+        <li><strong>สีดูเทาคล้ำ</strong>: เพิ่มความอิ่มตัวของภาพต้นฉบับสักหน่อย</li>
+        <li><strong>ภาพกลางในโหมด 3 ภาพมองไม่เห็น</strong>: มุมมองไม่ถูก หรือแผ่นรองรับแค่ 2 ภาพ</li>
+      </ul>
+      <h3>เรื่องสัดส่วนและขนาด</h3>
+      <p>แผ่นของคุณคือ 8.6 × 5.4 ซม. หากต้องการวางหลายแผ่นบนกระดาษใหญ่ ใช้ซอฟต์แวร์แต่งภาพจัดวาง PNG บน A4 ให้แต่ละแผ่นยังเป็น 8.6 × 5.4 ซม. <strong>ห้ามย่อขยายตอนจัดวาง</strong></p>
+    `,
+  },
+};
+
+let currentLang = 'zh-CN';
+
+function t(key, ...args) {
+  const dict = translations[currentLang] || translations['zh-CN'];
+  let str = dict[key];
+  if (str === undefined) str = (translations['zh-CN'][key] !== undefined ? translations['zh-CN'][key] : key);
+  args.forEach((v, i) => { str = str.split('{' + i + '}').join(String(v)); });
+  return str;
+}
+
+function applyLanguage(lang) {
+  if (!translations[lang]) lang = 'zh-CN';
+  currentLang = lang;
+  try { localStorage.setItem('lenticular_lang', lang); } catch (e) {}
+  document.documentElement.lang = lang;
+  // 浏览器标签页标题：品牌 + 当前语言副标题
+  document.title = 'Aetherlens · ' + (translations[lang]['app.title'] || 'Lenticular Pattern Generator');
+  // 文本节点
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  // 含 HTML 的节点
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    el.innerHTML = t(key);
+  });
+  // title 属性
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    el.title = t(key);
+  });
+  // 同步顶部切换器
+  const sw = $('lang-switcher');
+  if (sw) sw.value = lang;
+  // 重新计算依赖文本的动态视图
+  if (typeof updateInfo === 'function') updateInfo();
+  if (typeof updateCalInfo === 'function') updateCalInfo();
+  if (typeof updateLayoutInfo === 'function') updateLayoutInfo();
+  if (typeof renderQueue === 'function') renderQueue();
+  if (typeof renderAdjustTabs === 'function') renderAdjustTabs();
+  if (typeof updateSlots === 'function' && typeof getCurrentN === 'function') updateSlots(getCurrentN());
+}
+
+// 语言初始化的 IIFE 已经下移到文件末尾的"初始化"区域，
+// 因为它依赖 state（const，不会被 hoist），在前面运行会触发 TDZ 报错。
+const cmToInch = cm => cm / 2.54;
+
+function pxFromCm(cm, dpi) {
+  return Math.round(cm * dpi / 2.54);
+}
+
+// CRC32 用于 PNG pHYs chunk
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+// 把 DPI 信息（pHYs chunk）注入到 PNG blob 里，让打印软件按真实尺寸排版
+async function injectPhysChunk(blob, dpi) {
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  // PNG 头 8 字节后开始查找 IDAT
+  let pos = 8;
+  while (pos < buf.length) {
+    const len = (buf[pos] << 24) | (buf[pos+1] << 16) | (buf[pos+2] << 8) | buf[pos+3];
+    const type = String.fromCharCode(buf[pos+4], buf[pos+5], buf[pos+6], buf[pos+7]);
+    if (type === 'IDAT') break;
+    if (type === 'pHYs') return blob; // 已有则不动
+    pos += 12 + len;
+  }
+  // 构造 pHYs: 9 bytes data = 4(ppmX) + 4(ppmY) + 1(unit=1 meter)
+  const ppm = Math.round(dpi * 39.3700787);
+  const data = new Uint8Array(9);
+  const dv = new DataView(data.buffer);
+  dv.setUint32(0, ppm, false);
+  dv.setUint32(4, ppm, false);
+  data[8] = 1;
+  const type = new Uint8Array([0x70, 0x48, 0x59, 0x73]); // 'pHYs'
+  const crcInput = new Uint8Array(type.length + data.length);
+  crcInput.set(type, 0); crcInput.set(data, type.length);
+  const crc = crc32(crcInput);
+  const lenBytes = new Uint8Array(4);
+  new DataView(lenBytes.buffer).setUint32(0, 9, false);
+  const crcBytes = new Uint8Array(4);
+  new DataView(crcBytes.buffer).setUint32(0, crc, false);
+  const chunk = new Uint8Array(4 + 4 + 9 + 4);
+  chunk.set(lenBytes, 0); chunk.set(type, 4); chunk.set(data, 8); chunk.set(crcBytes, 17);
+  // 拼接：原数据 [0..pos) + 新 chunk + [pos..)
+  const out = new Uint8Array(buf.length + chunk.length);
+  out.set(buf.subarray(0, pos), 0);
+  out.set(chunk, pos);
+  out.set(buf.subarray(pos), pos + chunk.length);
+  return new Blob([out], { type: 'image/png' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// 把单张图按 transform（旋转/缩放/平移）画到目标 canvas 上
+// transform = {rotation, scale, offsetX, offsetY}; offset 用归一化坐标（0=居中，0.5=偏移半个画布宽/高）
+// scale=1 即"铺满"裁剪（cover-fit）
+function applyImageTransform(ctx, img, canvasW, canvasH, t) {
+  t = t || identityTransform();
+  const rot = ((t.rotation % 360) + 360) % 360;
+  const rotated = (rot % 180) !== 0;
+
+  // 取裁切区域（归一化 → 像素），无裁切时取整图
+  const c = t.crop;
+  const cx = c ? c.x * img.width  : 0;
+  const cy = c ? c.y * img.height : 0;
+  const cw = c ? c.w * img.width  : img.width;
+  const ch = c ? c.h * img.height : img.height;
+
+  const effW = rotated ? ch : cw;
+  const effH = rotated ? cw : ch;
+  const baseScale = Math.max(canvasW / effW, canvasH / effH);
+  const finalScale = baseScale * (t.scale || 1);
+
+  ctx.imageSmoothingQuality = 'high';
+  ctx.save();
+  ctx.translate(canvasW / 2 + (t.offsetX || 0) * canvasW, canvasH / 2 + (t.offsetY || 0) * canvasH);
+  ctx.rotate(rot * Math.PI / 180);
+  ctx.scale(finalScale, finalScale);
+  // 把裁切后的子图居中绘制（drawImage 自带源矩形 + 目标矩形）
+  ctx.drawImage(img, cx, cy, cw, ch, -cw / 2, -ch / 2, cw, ch);
+  ctx.restore();
+}
+
+// 把图片处理到指定大小（含可选背景填充和 transform）
+function coverDraw(img, targetW, targetH, bgColor, transform) {
+  const c = document.createElement('canvas');
+  c.width = targetW; c.height = targetH;
+  const ctx = c.getContext('2d');
+  if (bgColor) {
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, targetW, targetH);
+  }
+  applyImageTransform(ctx, img, targetW, targetH, transform);
+  return c;
+}
+
+// 在 4 个切口角画 L 形裁切标记。bleed 单位是像素。
+function drawCutMarks(ctx, W_out, H_out, bleed, dpi) {
+  const thick = Math.max(1, Math.round(0.2 * dpi / 25.4));
+  const len = Math.min(bleed - 1, Math.round(3 * dpi / 25.4));
+  if (len < 2) return;
+  ctx.fillStyle = '#000';
+  // Top-left（切口角在 (bleed, bleed)）
+  ctx.fillRect(0, bleed - thick, len, thick);
+  ctx.fillRect(bleed - thick, 0, thick, len);
+  // Top-right（切口角在 (W_out - bleed, bleed)）
+  ctx.fillRect(W_out - len, bleed - thick, len, thick);
+  ctx.fillRect(W_out - bleed, 0, thick, len);
+  // Bottom-left
+  ctx.fillRect(0, H_out - bleed, len, thick);
+  ctx.fillRect(bleed - thick, H_out - len, thick, len);
+  // Bottom-right
+  ctx.fillRect(W_out - len, H_out - bleed, len, thick);
+  ctx.fillRect(W_out - bleed, H_out - len, thick, len);
+}
+
+//==============================================================
+// 状态
+//==============================================================
+function identityTransform() {
+  // crop: null = 不裁切；否则 {x, y, w, h} 都是源图归一化坐标 [0..1]
+  return { rotation: 0, scale: 1, offsetX: 0, offsetY: 0, crop: null };
+}
+
+const state = {
+  images: [null, null, null], // 最多 3 张
+  imageTransforms: [identityTransform(), identityTransform(), identityTransform()],
+  outputBlob: null,
+  outputCanvas: null,
+  calBlob: null,
+  calCanvas: null,
+  layoutBlob: null,
+  layoutCanvas: null,
+  pieces: [],     // 拼版队列：{canvas, count, name, thumb, w, h}
+  placements: [], // 当前 layout 各张的位置：{pieceIdx, x, y, w, h}
+  pieceCounter: 0,
+  editor: {       // 图片编辑器状态
+    active: -1,
+    backup: null,
+    dragging: false,
+    dragStart: null,
+    overlayShow: [true, true, true], // 叠加显示哪几张其他图
+    overlayOpacity: 0.5,             // 叠加图的透明度
+    cropMode: false,                 // 是否在裁切模式
+    cropBackup: null,                // 进入裁切模式前的 crop 备份
+    cropDragging: false,             // 裁切框内的拖动中
+    cropDragHandle: null,            // 'tl'|'tr'|'bl'|'br'|'inside'
+    cropDragStart: null,
+  },
+};
+
+//==============================================================
+// Tab 切换
+//==============================================================
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    $('panel-' + btn.dataset.panel).classList.add('active');
+  });
+});
+
+//==============================================================
+// 参数显示与计算
+//==============================================================
+function getCurrentLpi() {
+  const v = $('lpi').value;
+  if (v === 'custom') return parseFloat($('lpi-custom').value) || 75;
+  return parseFloat(v);
+}
+function getCurrentDpi()    { return parseInt($('dpi').value); }
+function getCurrentN()      { return parseInt($('num-images').value); }
+function getCurrentSizeCm() { return [parseFloat($('width-cm').value), parseFloat($('height-cm').value)]; }
+function getCurrentOrient() { return $('orientation').value; }
+
+function updateInfo() {
+  const lpi = getCurrentLpi();
+  const dpi = getCurrentDpi();
+  const n = getCurrentN();
+  const [wcm, hcm] = getCurrentSizeCm();
+  const orient = getCurrentOrient();
+  const bleedEnabled = $('bleed-enabled').checked;
+  const bleedMm = bleedEnabled ? (parseFloat($('bleed-mm').value) || 0) : 0;
+  const bleedPx = Math.round(bleedMm * dpi / 25.4);
+  const W = pxFromCm(wcm, dpi);
+  const H = pxFromCm(hcm, dpi);
+  const W_out = W + 2 * bleedPx;
+  const H_out = H + 2 * bleedPx;
+  const pitch = dpi / lpi;
+  const stripPx = pitch / n;
+  const lensCount = orient === 'vertical' ? W / pitch : H / pitch;
+
+  let warn = '';
+  if (stripPx < 2) warn += `<div class="warn">${t('in.warnStrip')}</div>`;
+  if (Math.abs(pitch - Math.round(pitch)) > 0.01) {
+    warn += `<div>${t('in.warnNonInt', pitch.toFixed(3), Math.ceil(pitch)*lpi)}</div>`;
+  }
+
+  let sizeInfo;
+  if (bleedMm > 0) {
+    sizeInfo =
+      t('in.cutSize', W, H, wcm, hcm) + '<br>' +
+      t('in.bleedOut', W_out, H_out, (wcm + 2*bleedMm/10).toFixed(2), (hcm + 2*bleedMm/10).toFixed(2), bleedMm, dpi);
+  } else {
+    sizeInfo = t('in.outSize', W, H, wcm, hcm, dpi);
+  }
+
+  $('calc-info').innerHTML = `
+    ${sizeInfo}<br>
+    ${t('in.lensDetail', pitch.toFixed(3), stripPx.toFixed(3), lensCount.toFixed(1))}<br>
+    ${warn}
+  `;
+
+  // 同步图片格子数量
+  updateSlots(n);
+}
+
+['lpi', 'lpi-custom', 'dpi', 'num-images', 'width-cm', 'height-cm', 'orientation',
+ 'bleed-enabled', 'bleed-mm', 'cut-marks'].forEach(id => {
+  $(id).addEventListener('input', updateInfo);
+  $(id).addEventListener('change', updateInfo);
+});
+$('lpi').addEventListener('change', () => {
+  $('lpi-custom-wrap').style.display = $('lpi').value === 'custom' ? '' : 'none';
+});
+$('bg-transparent').addEventListener('change', () => {
+  $('bg-color').disabled = $('bg-transparent').checked;
+  $('bg-color').style.opacity = $('bg-transparent').checked ? 0.4 : 1;
+});
+$('bleed-enabled').addEventListener('change', () => {
+  $('bleed-options').style.display = $('bleed-enabled').checked ? 'block' : 'none';
+});
+
+//==============================================================
+// 图片上传
+//==============================================================
+function updateSlots(n) {
+  const wrap = $('image-slots');
+  wrap.innerHTML = '';
+  const [wcm, hcm] = getCurrentSizeCm();
+  const slotAspect = wcm / hcm;
+  for (let i = 0; i < n; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'slot' + (state.images[i] ? ' has-image' : '');
+    slot.dataset.idx = i;
+    if (state.images[i]) {
+      // 用 canvas 渲染缩略图，体现当前 transform（旋转/缩放/平移）
+      const tCanvas = document.createElement('canvas');
+      tCanvas.className = 'thumb';
+      const tw = 320;
+      const th = Math.max(40, Math.round(tw / slotAspect));
+      tCanvas.width = tw;
+      tCanvas.height = th;
+      applyImageTransform(tCanvas.getContext('2d'), state.images[i], tw, th, state.imageTransforms[i]);
+      slot.appendChild(tCanvas);
+
+      const rm = document.createElement('button');
+      rm.className = 'remove';
+      rm.textContent = '×';
+      rm.title = '删除';
+      rm.onclick = e => {
+        e.stopPropagation();
+        state.images[i] = null;
+        state.imageTransforms[i] = identityTransform();
+        updateSlots(n);
+      };
+      slot.appendChild(rm);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'placeholder';
+      const labels = n === 2
+        ? [t('s2.lab.left'), t('s2.lab.right')]
+        : [t('s2.lab.start'), t('s2.lab.middle'), t('s2.lab.end')];
+      ph.innerHTML = `<strong>${labels[i]}</strong>${t('s2.tap')}`;
+      slot.appendChild(ph);
+    }
+    slot.addEventListener('click', () => {
+      // 已有图：点击 slot 不触发选文件（要换图先点 ×；要编辑点 ✎）
+      if (state.images[i]) return;
+      pickFile(i, n);
+    });
+    slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('dragover'); });
+    slot.addEventListener('dragleave', () => slot.classList.remove('dragover'));
+    slot.addEventListener('drop', e => {
+      e.preventDefault();
+      slot.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) loadFileToSlot(file, i, n);
+    });
+    wrap.appendChild(slot);
+  }
+  renderAdjustTabs();
+}
+
+function pickFile(idx, n) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = () => {
+    if (input.files[0]) loadFileToSlot(input.files[0], idx, n);
+  };
+  input.click();
+}
+
+function loadFileToSlot(file, idx, n) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      state.images[idx] = img;
+      state.imageTransforms[idx] = identityTransform(); // 新图重置 transform
+      updateSlots(n);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+//==============================================================
+// 图片编辑器（内嵌于第 3 步，缩放 / 旋转 / 平移 / 叠加对位）
+//==============================================================
+function switchAdjustTab(idx) {
+  if (!state.images[idx]) return;
+  state.editor.active = idx;
+  renderAdjustTabs();
+}
+
+function renderAdjustTabs() {
+  const tabsEl = $('adjust-tabs');
+  if (!tabsEl) return;
+  const n = getCurrentN();
+
+  // 找第一张已上传的图
+  let firstAvail = -1;
+  for (let i = 0; i < n; i++) {
+    if (state.images[i]) { firstAvail = i; break; }
+  }
+  // active 指向的位置如果没图，自动切到第一张已上传的
+  if (state.editor.active < 0 || state.editor.active >= n || !state.images[state.editor.active]) {
+    state.editor.active = firstAvail;
+  }
+
+  tabsEl.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const tab = document.createElement('button');
+    tab.className = 'adjust-tab';
+    if (!state.images[i]) tab.classList.add('disabled');
+    if (state.editor.active === i) tab.classList.add('active');
+
+    const tr = state.imageTransforms[i];
+    const modified = state.images[i] && (tr.rotation !== 0 || tr.scale !== 1 || Math.abs(tr.offsetX) > 0.001 || Math.abs(tr.offsetY) > 0.001 || !!tr.crop);
+
+    tab.appendChild(document.createTextNode(t('s3.tab', i + 1)));
+    if (modified) {
+      const dot = document.createElement('span');
+      dot.className = 'modified-dot';
+      dot.title = t('tt.editTabRemove');
+      tab.appendChild(dot);
+    }
+    if (!state.images[i]) {
+      const note = document.createElement('span');
+      note.className = 'tab-note';
+      note.textContent = t('s3.notUploaded');
+      tab.appendChild(note);
+    }
+    if (state.images[i]) {
+      tab.onclick = () => switchAdjustTab(i);
+    }
+    tabsEl.appendChild(tab);
+  }
+
+  const hasAny = firstAvail >= 0;
+  $('adjust-empty-state').style.display = hasAny ? 'none' : '';
+  $('adjust-editor-content').style.display = hasAny ? '' : 'none';
+
+  if (hasAny && state.images[state.editor.active]) {
+    populateOverlayToggles();
+    drawEditor();
+    const t = state.imageTransforms[state.editor.active];
+    $('editor-zoom').value = t.scale;
+    $('editor-zoom-label').textContent = Math.round(t.scale * 100) + '%';
+    $('editor-overlay-opacity').value = state.editor.overlayOpacity;
+    $('editor-overlay-opacity-label').textContent = Math.round(state.editor.overlayOpacity * 100) + '%';
+  }
+}
+
+function populateOverlayToggles() {
+  const row = $('editor-overlays-row');
+  // 先清空旧的勾选框（保留标题和透明度滑块）
+  row.querySelectorAll('.overlay-toggle').forEach(el => el.remove());
+  const opacityWrap = row.querySelector('.zoom-row');
+  const n = getCurrentN();
+  const idx = state.editor.active;
+  let hasOthers = false;
+  for (let i = 0; i < n; i++) {
+    if (i === idx || !state.images[i]) continue;
+    hasOthers = true;
+    const lbl = document.createElement('label');
+    lbl.className = 'overlay-toggle';
+    lbl.style.cssText = 'display:flex;align-items:center;gap:4px;cursor:pointer;color:#1d1d1f';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = state.editor.overlayShow[i];
+    cb.onchange = () => {
+      state.editor.overlayShow[i] = cb.checked;
+      drawEditor();
+    };
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(` 第 ${i + 1} 张`));
+    row.insertBefore(lbl, opacityWrap);
+  }
+  row.style.display = hasOthers ? '' : 'none';
+}
+
+function drawEditor() {
+  const idx = state.editor.active;
+  if (idx < 0) return;
+  if (state.editor.cropMode) { drawCropEditor(); return; }
+
+  const canvas = $('editor-canvas');
+  const [wcm, hcm] = getCurrentSizeCm();
+  const aspect = wcm / hcm;
+  const W = 900;
+  const H = Math.round(W / aspect);
+  if (canvas.width !== W) canvas.width = W;
+  if (canvas.height !== H) canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // 1. 先画当前正在编辑的图（满 alpha）
+  applyImageTransform(ctx, state.images[idx], W, H, state.imageTransforms[idx]);
+
+  // 2. 把其他启用的图按设定透明度叠在上面（鬼影对位）
+  const n = getCurrentN();
+  for (let i = 0; i < n; i++) {
+    if (i === idx) continue;
+    if (!state.images[i]) continue;
+    if (!state.editor.overlayShow[i]) continue;
+    ctx.save();
+    ctx.globalAlpha = state.editor.overlayOpacity;
+    applyImageTransform(ctx, state.images[i], W, H, state.imageTransforms[i]);
+    ctx.restore();
+  }
+}
+
+//---------- 裁切模式 ----------
+function imageContainFit(canvasW, canvasH, img) {
+  const ar = img.width / img.height;
+  const cAr = canvasW / canvasH;
+  let imgW, imgH;
+  if (ar > cAr) { imgW = canvasW; imgH = canvasW / ar; }
+  else          { imgH = canvasH; imgW = canvasH * ar; }
+  return { imgW, imgH, imgX: (canvasW - imgW) / 2, imgY: (canvasH - imgH) / 2 };
+}
+
+function ensureDefaultCrop(idx) {
+  const t = state.imageTransforms[idx];
+  if (t.crop) return;
+  // 默认整图
+  t.crop = { x: 0, y: 0, w: 1, h: 1 };
+}
+
+function drawCropEditor() {
+  const idx = state.editor.active;
+  const img = state.images[idx];
+  const t = state.imageTransforms[idx];
+  ensureDefaultCrop(idx);
+  const c = t.crop;
+
+  const canvas = $('editor-canvas');
+  const [wcm, hcm] = getCurrentSizeCm();
+  const aspect = wcm / hcm;
+  const W = 900;
+  const H = Math.round(W / aspect);
+  if (canvas.width !== W) canvas.width = W;
+  if (canvas.height !== H) canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // 灰底
+  ctx.fillStyle = '#1d1d1f';
+  ctx.fillRect(0, 0, W, H);
+
+  // 整张源图 contain 显示（不应用其他 transform）
+  const fit = imageContainFit(W, H, img);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, fit.imgX, fit.imgY, fit.imgW, fit.imgH);
+
+  // 裁切框在画布坐标
+  const rx = fit.imgX + c.x * fit.imgW;
+  const ry = fit.imgY + c.y * fit.imgH;
+  const rw = c.w * fit.imgW;
+  const rh = c.h * fit.imgH;
+
+  // 框外暗化
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, 0, W, ry);
+  ctx.fillRect(0, ry + rh, W, H - ry - rh);
+  ctx.fillRect(0, ry, rx, rh);
+  ctx.fillRect(rx + rw, ry, W - rx - rw, rh);
+
+  // 三分线
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 3; i++) {
+    const xx = rx + rw * i / 3;
+    ctx.beginPath(); ctx.moveTo(xx, ry); ctx.lineTo(xx, ry + rh); ctx.stroke();
+    const yy = ry + rh * i / 3;
+    ctx.beginPath(); ctx.moveTo(rx, yy); ctx.lineTo(rx + rw, yy); ctx.stroke();
+  }
+
+  // 裁切框边
+  ctx.strokeStyle = '#0071e3';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(rx, ry, rw, rh);
+
+  // 4 角手柄
+  const hs = 14;
+  ctx.fillStyle = '#0071e3';
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 2;
+  const handles = [
+    [rx, ry], [rx + rw, ry], [rx, ry + rh], [rx + rw, ry + rh],
+  ];
+  handles.forEach(([hx, hy]) => {
+    ctx.fillRect(hx - hs/2, hy - hs/2, hs, hs);
+    ctx.strokeRect(hx - hs/2, hy - hs/2, hs, hs);
+  });
+}
+
+function hitTestCrop(cx, cy) {
+  const idx = state.editor.active;
+  const img = state.images[idx];
+  const c = state.imageTransforms[idx].crop;
+  if (!c) return 'outside';
+  const canvas = $('editor-canvas');
+  const fit = imageContainFit(canvas.width, canvas.height, img);
+  const rx = fit.imgX + c.x * fit.imgW;
+  const ry = fit.imgY + c.y * fit.imgH;
+  const rw = c.w * fit.imgW;
+  const rh = c.h * fit.imgH;
+  const tol = 12;
+  const near = (a, b) => Math.abs(a - b) <= tol;
+  if (near(cx, rx) && near(cy, ry)) return 'tl';
+  if (near(cx, rx + rw) && near(cy, ry)) return 'tr';
+  if (near(cx, rx) && near(cy, ry + rh)) return 'bl';
+  if (near(cx, rx + rw) && near(cy, ry + rh)) return 'br';
+  if (cx >= rx && cx <= rx + rw && cy >= ry && cy <= ry + rh) return 'inside';
+  return 'outside';
+}
+
+function enterCropMode() {
+  if (state.editor.active < 0 || !state.images[state.editor.active]) return;
+  const t = state.imageTransforms[state.editor.active];
+  state.editor.cropBackup = t.crop ? { ...t.crop } : null;
+  state.editor.cropMode = true;
+  ensureDefaultCrop(state.editor.active);
+  $('editor-main-controls').style.display = 'none';
+  $('editor-overlays-row').style.display = 'none';
+  $('editor-crop-controls').style.display = 'flex';
+  drawCropEditor();
+}
+
+function exitCropMode(apply) {
+  const idx = state.editor.active;
+  if (!apply && idx >= 0) {
+    state.imageTransforms[idx].crop = state.editor.cropBackup;
+  }
+  state.editor.cropMode = false;
+  state.editor.cropBackup = null;
+  state.editor.cropDragging = false;
+  state.editor.cropDragHandle = null;
+  $('editor-main-controls').style.display = 'flex';
+  $('editor-crop-controls').style.display = 'none';
+  // overlays-row 是否显示由 populateOverlayToggles 控制
+  populateOverlayToggles();
+  drawEditor();
+  softRefreshTabs();
+}
+
+function clearCropAndExit() {
+  if (state.editor.active >= 0) {
+    state.imageTransforms[state.editor.active].crop = null;
+  }
+  state.editor.cropBackup = null; // 防止 exitCropMode(false) 把 null 还原成 backup
+  exitCropMode(true);
+}
+
+$('editor-crop').addEventListener('click', enterCropMode);
+$('editor-crop-apply').addEventListener('click', () => exitCropMode(true));
+$('editor-crop-cancel').addEventListener('click', () => exitCropMode(false));
+$('editor-crop-clear').addEventListener('click', clearCropAndExit);
+
+const editorCanvas = $('editor-canvas');
+
+function clientToCanvasCoords(e) {
+  const rect = editorCanvas.getBoundingClientRect();
+  if (rect.width === 0) return null;
+  return {
+    cx: (e.clientX - rect.left) * editorCanvas.width / rect.width,
+    cy: (e.clientY - rect.top) * editorCanvas.height / rect.height,
+    rectW: rect.width, rectH: rect.height,
+  };
+}
+
+editorCanvas.addEventListener('mousedown', e => {
+  if (state.editor.active < 0) return;
+  if (state.editor.cropMode) {
+    const p = clientToCanvasCoords(e);
+    if (!p) return;
+    const hit = hitTestCrop(p.cx, p.cy);
+    if (hit === 'outside') return;
+    state.editor.cropDragging = true;
+    state.editor.cropDragHandle = hit;
+    state.editor.cropDragStart = {
+      cx: p.cx, cy: p.cy,
+      crop: { ...state.imageTransforms[state.editor.active].crop },
+    };
+    e.preventDefault();
+    return;
+  }
+  // 普通模式：平移
+  state.editor.dragging = true;
+  const t = state.imageTransforms[state.editor.active];
+  state.editor.dragStart = {
+    x: e.clientX, y: e.clientY,
+    offsetX: t.offsetX, offsetY: t.offsetY,
+  };
+});
+
+window.addEventListener('mousemove', e => {
+  if (state.editor.cropDragging) {
+    handleCropMouseMove(e);
+    return;
+  }
+  if (!state.editor.dragging) return;
+  const t = state.imageTransforms[state.editor.active];
+  const rect = editorCanvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  const dx = (e.clientX - state.editor.dragStart.x) / rect.width;
+  const dy = (e.clientY - state.editor.dragStart.y) / rect.height;
+  t.offsetX = state.editor.dragStart.offsetX + dx;
+  t.offsetY = state.editor.dragStart.offsetY + dy;
+  drawEditor();
+});
+
+window.addEventListener('mouseup', () => {
+  if (state.editor.cropDragging) {
+    state.editor.cropDragging = false;
+    state.editor.cropDragHandle = null;
+  }
+  if (state.editor.dragging) {
+    state.editor.dragging = false;
+    softRefreshTabs();
+  }
+});
+
+function handleCropMouseMove(e) {
+  const idx = state.editor.active;
+  const img = state.images[idx];
+  const start = state.editor.cropDragStart;
+  const handle = state.editor.cropDragHandle;
+  const p = clientToCanvasCoords(e);
+  if (!p) return;
+  const fit = imageContainFit(editorCanvas.width, editorCanvas.height, img);
+  const dx = (p.cx - start.cx) / fit.imgW;
+  const dy = (p.cy - start.cy) / fit.imgH;
+
+  let left = start.crop.x;
+  let top = start.crop.y;
+  let right = start.crop.x + start.crop.w;
+  let bottom = start.crop.y + start.crop.h;
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+
+  if (handle === 'inside') {
+    // 整体平移，限制不超出 [0,1]
+    const cdx = Math.max(-left, Math.min(1 - right, dx));
+    const cdy = Math.max(-top, Math.min(1 - bottom, dy));
+    left += cdx; right += cdx;
+    top += cdy; bottom += cdy;
+  } else {
+    if (handle.includes('l')) left = clamp01(left + dx);
+    if (handle.includes('r')) right = clamp01(right + dx);
+    if (handle.includes('t')) top = clamp01(top + dy);
+    if (handle.includes('b')) bottom = clamp01(bottom + dy);
+  }
+
+  const newCrop = {
+    x: Math.min(left, right),
+    y: Math.min(top, bottom),
+    w: Math.abs(right - left),
+    h: Math.abs(bottom - top),
+  };
+  // 最小尺寸 5%
+  if (newCrop.w < 0.05 || newCrop.h < 0.05) return;
+  state.imageTransforms[idx].crop = newCrop;
+  drawCropEditor();
+}
+
+// 不重建 DOM，只更新 tab 上的"已调整"小点
+function softRefreshTabs() {
+  const tabsEl = $('adjust-tabs');
+  if (!tabsEl) return;
+  Array.from(tabsEl.children).forEach((tab, i) => {
+    if (!state.images[i]) return;
+    const tr = state.imageTransforms[i];
+    const modified = tr.rotation !== 0 || tr.scale !== 1 || Math.abs(tr.offsetX) > 0.001 || Math.abs(tr.offsetY) > 0.001 || !!tr.crop;
+    let dot = tab.querySelector('.modified-dot');
+    if (modified && !dot) {
+      dot = document.createElement('span');
+      dot.className = 'modified-dot';
+      dot.title = t('tt.editTabRemove');
+      tab.appendChild(dot);
+    } else if (!modified && dot) {
+      dot.remove();
+    }
+  });
+}
+
+editorCanvas.addEventListener('wheel', e => {
+  if (state.editor.active < 0 || state.editor.cropMode) return;
+  e.preventDefault();
+  const t = state.imageTransforms[state.editor.active];
+  const factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+  t.scale = Math.max(0.2, Math.min(5, t.scale * factor));
+  $('editor-zoom').value = t.scale;
+  $('editor-zoom-label').textContent = Math.round(t.scale * 100) + '%';
+  drawEditor();
+  softRefreshTabs();
+}, { passive: false });
+
+$('editor-zoom').addEventListener('input', e => {
+  if (state.editor.active < 0) return;
+  const v = parseFloat(e.target.value);
+  state.imageTransforms[state.editor.active].scale = v;
+  $('editor-zoom-label').textContent = Math.round(v * 100) + '%';
+  drawEditor();
+  softRefreshTabs();
+});
+
+$('editor-overlay-opacity').addEventListener('input', e => {
+  state.editor.overlayOpacity = parseFloat(e.target.value);
+  $('editor-overlay-opacity-label').textContent = Math.round(state.editor.overlayOpacity * 100) + '%';
+  drawEditor();
+});
+
+$('editor-rotate-l').addEventListener('click', () => {
+  if (state.editor.active < 0) return;
+  const t = state.imageTransforms[state.editor.active];
+  t.rotation = (t.rotation - 90 + 360) % 360;
+  drawEditor();
+  softRefreshTabs();
+});
+$('editor-rotate-r').addEventListener('click', () => {
+  if (state.editor.active < 0) return;
+  const t = state.imageTransforms[state.editor.active];
+  t.rotation = (t.rotation + 90) % 360;
+  drawEditor();
+  softRefreshTabs();
+});
+$('editor-reset').addEventListener('click', () => {
+  if (state.editor.active < 0) return;
+  state.imageTransforms[state.editor.active] = identityTransform();
+  $('editor-zoom').value = 1;
+  $('editor-zoom-label').textContent = '100%';
+  drawEditor();
+  softRefreshTabs();
+});
+// 物理尺寸或方向变化时编辑器实时重画 + 标签里"已修改"标识也要刷新
+['width-cm', 'height-cm', 'orientation'].forEach(id => {
+  $(id).addEventListener('change', renderAdjustTabs);
+});
+
+//==============================================================
+// 交错图生成
+//==============================================================
+function setProgress(p) {
+  const bar = $('progress-bar');
+  bar.style.width = (p * 100) + '%';
+  $('progress-bar').parentElement.classList.toggle('active', p > 0 && p < 1);
+}
+
+async function generateInterlaced() {
+  const lpi = getCurrentLpi();
+  const dpi = getCurrentDpi();
+  const n = getCurrentN();
+  const [wcm, hcm] = getCurrentSizeCm();
+  const orient = getCurrentOrient();
+  const bleedEnabled = $('bleed-enabled').checked;
+  const bleedMm = bleedEnabled ? (parseFloat($('bleed-mm').value) || 0) : 0;
+  const bleedPx = Math.round(bleedMm * dpi / 25.4);
+  const showCutMarks = bleedEnabled && $('cut-marks').checked && bleedPx > 2;
+  const W = pxFromCm(wcm, dpi);
+  const H = pxFromCm(hcm, dpi);
+  const W_out = W + 2 * bleedPx;
+  const H_out = H + 2 * bleedPx;
+  const pitch = dpi / lpi;
+
+  // 检查图片
+  const imgs = state.images.slice(0, n);
+  const missing = imgs.findIndex(x => !x);
+  if (missing >= 0) {
+    alert(t('al.uploadFirst', missing + 1));
+    return;
+  }
+
+  $('status').textContent = t('s4.statusProc');
+  $('generate').disabled = true;
+  setProgress(0.05);
+  await new Promise(r => setTimeout(r, 30));
+
+  // 1. 把每张源图覆盖裁剪到 W_out x H_out（出血区域用源图本身延伸填充，不会有边缘割裂）
+  const transparent = $('bg-transparent').checked;
+  const bgColor = transparent ? null : $('bg-color').value;
+  const sourceCanvases = imgs.map((img, i) => coverDraw(img, W_out, H_out, bgColor, state.imageTransforms[i]));
+  setProgress(0.3);
+  await new Promise(r => setTimeout(r, 30));
+
+  const sourceImageDatas = sourceCanvases.map(c => c.getContext('2d').getImageData(0, 0, W_out, H_out));
+  setProgress(0.5);
+  await new Promise(r => setTimeout(r, 30));
+
+  // 2. 输出 canvas
+  const out = document.createElement('canvas');
+  out.width = W_out; out.height = H_out;
+  const outCtx = out.getContext('2d');
+  const outData = outCtx.createImageData(W_out, H_out);
+
+  // 3. 交错：phase 以"切口边"为 0，让出血区与切口区光栅周期严格连续
+  if (orient === 'vertical') {
+    const col2src = new Int32Array(W_out);
+    for (let x = 0; x < W_out; x++) {
+      const phaseRaw = (((x - bleedPx) % pitch) + pitch) % pitch;
+      const phase = phaseRaw / pitch;
+      col2src[x] = Math.min(n - 1, Math.floor(phase * n));
+    }
+    for (let y = 0; y < H_out; y++) {
+      for (let x = 0; x < W_out; x++) {
+        const src = sourceImageDatas[col2src[x]];
+        const o = (y * W_out + x) * 4;
+        outData.data[o]     = src.data[o];
+        outData.data[o + 1] = src.data[o + 1];
+        outData.data[o + 2] = src.data[o + 2];
+        outData.data[o + 3] = transparent ? src.data[o + 3] : 255;
+      }
+      if (y % 200 === 0) {
+        setProgress(0.5 + 0.4 * (y / H_out));
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
+  } else {
+    const row2src = new Int32Array(H_out);
+    for (let y = 0; y < H_out; y++) {
+      const phaseRaw = (((y - bleedPx) % pitch) + pitch) % pitch;
+      const phase = phaseRaw / pitch;
+      row2src[y] = Math.min(n - 1, Math.floor(phase * n));
+    }
+    for (let y = 0; y < H_out; y++) {
+      const src = sourceImageDatas[row2src[y]];
+      const rowStart = y * W_out * 4;
+      outData.data.set(src.data.subarray(rowStart, rowStart + W_out * 4), rowStart);
+      if (y % 200 === 0) {
+        setProgress(0.5 + 0.4 * (y / H_out));
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
+  }
+  outCtx.putImageData(outData, 0, 0);
+
+  // 3.5 裁切标记（在交错图上叠绘，全部位于出血区，剪切后会被去掉）
+  if (showCutMarks) {
+    drawCutMarks(outCtx, W_out, H_out, bleedPx, dpi);
+  }
+
+  setProgress(0.95);
+
+  // 4. 转 blob 并注入 DPI
+  const blob = await new Promise(r => out.toBlob(r, 'image/png'));
+  state.outputBlob = await injectPhysChunk(blob, dpi);
+  state.outputCanvas = out;
+
+  // 5. 显示预览
+  const pv = $('preview-canvas');
+  pv.width = W_out; pv.height = H_out;
+  pv.getContext('2d').drawImage(out, 0, 0);
+  $('preview-empty').style.display = 'none';
+  pv.style.display = 'block';
+  $('download').disabled = false;
+  $('add-to-queue').disabled = false;
+  $('generate').disabled = false;
+  $('status').textContent = t('s4.statusGen');
+  setProgress(0);
+  updateLayoutInfo();
+}
+
+$('generate').addEventListener('click', generateInterlaced);
+$('download').addEventListener('click', () => {
+  if (!state.outputBlob) return;
+  const lpi = getCurrentLpi();
+  const dpi = getCurrentDpi();
+  const n = getCurrentN();
+  const [wcm, hcm] = getCurrentSizeCm();
+  const orient = getCurrentOrient() === 'vertical' ? 'V' : 'H';
+  const fname = `lenticular_${wcm}x${hcm}cm_${lpi}LPI_${dpi}DPI_${n}img_${orient}.png`;
+  downloadBlob(state.outputBlob, fname);
+});
+
+//==============================================================
+// 拼版到 A4 / A3
+//==============================================================
+const PAPER_PRESETS = {
+  A4: [210, 297],
+  A3: [297, 420],
+  A2: [420, 594],
+};
+
+function getPaperSizeMm() {
+  const v = $('paper-size').value;
+  if (PAPER_PRESETS[v]) return PAPER_PRESETS[v].slice();
+  return [parseFloat($('paper-w').value) || 210, parseFloat($('paper-h').value) || 297];
+}
+
+function calcLayout(pieceW, pieceH, dpi) {
+  const [shortMm, longMm] = getPaperSizeMm().sort((a, b) => a - b);
+  const margin_mm = parseFloat($('paper-margin').value) || 0;
+  const spacing_mm = parseFloat($('paper-spacing').value) || 0;
+  const margin_px = Math.round(margin_mm * dpi / 25.4);
+  const spacing_px = Math.round(spacing_mm * dpi / 25.4);
+  const shortPx = Math.round(shortMm * dpi / 25.4);
+  const longPx = Math.round(longMm * dpi / 25.4);
+
+  function fit(paperW, paperH) {
+    const usableW = paperW - 2 * margin_px;
+    const usableH = paperH - 2 * margin_px;
+    const cols = Math.max(0, Math.floor((usableW + spacing_px) / (pieceW + spacing_px)));
+    const rows = Math.max(0, Math.floor((usableH + spacing_px) / (pieceH + spacing_px)));
+    return { cols, rows, total: cols * rows, paperW, paperH };
+  }
+
+  const orient = $('paper-orient').value;
+  if (orient === 'portrait') return fit(shortPx, longPx);
+  if (orient === 'landscape') return fit(longPx, shortPx);
+  const p = fit(shortPx, longPx);
+  const l = fit(longPx, shortPx);
+  return l.total > p.total ? l : p;
+}
+
+// 浏览器 canvas 硬上限：单边 ≤16384 像素、总面积 ≤16384² = 2.68 亿像素
+const MAX_CANVAS_DIM = 16384;
+const MAX_CANVAS_PX = 16384 * 16384;
+
+//======================== 队列管理 ========================
+// 通用入队：传入一张已经独立的 canvas + 显示名，自动生成缩略图加入
+function addCanvasToQueue(canvas, displayName) {
+  const TW = 128;
+  const TH = Math.max(8, Math.round(TW * canvas.height / canvas.width));
+  const tc = document.createElement('canvas');
+  tc.width = TW; tc.height = TH;
+  tc.getContext('2d').drawImage(canvas, 0, 0, TW, TH);
+  const thumb = tc.toDataURL('image/png');
+
+  state.pieceCounter++;
+  state.pieces.push({
+    canvas,
+    count: 1,
+    name: t('s5.itemPrefix', state.pieceCounter) + ' · ' + displayName,
+    thumb,
+    w: canvas.width,
+    h: canvas.height,
+  });
+}
+
+// 从第 4 步生成结果加入
+function addToQueue() {
+  if (!state.outputCanvas) return;
+
+  // 拷贝到独立 canvas（避免浏览器在内存压力下丢弃未挂载 canvas 的像素数据）
+  const copyC = document.createElement('canvas');
+  copyC.width = state.outputCanvas.width;
+  copyC.height = state.outputCanvas.height;
+  copyC.getContext('2d').drawImage(state.outputCanvas, 0, 0);
+
+  const lpi = getCurrentLpi();
+  const [wcm, hcm] = getCurrentSizeCm();
+  const n = getCurrentN();
+  addCanvasToQueue(copyC, t('s5.unitName.from3', wcm, hcm, lpi, n));
+
+  // 第 1 张：铺满；第 2 张：对半；以此类推。之后可手动调
+  redistributePieceCounts();
+  renderQueue();
+  updateLayoutInfo();
+}
+
+// 把一个 File 读成 canvas（含 image 加载）
+function fileToCanvas(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = img.width;
+        c.height = img.height;
+        c.getContext('2d').drawImage(img, 0, 0);
+        resolve(c);
+      };
+      img.onerror = () => reject(new Error('图片解码失败'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('文件读取失败'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// 从本机上传一批图加入队列（支持多选 + 拖拽）
+async function uploadFilesToQueue(files) {
+  const fileList = Array.from(files || []).filter(f => f.type.startsWith('image/'));
+  if (!fileList.length) {
+    if (files && files.length) alert(t('al.notImage'));
+    return;
+  }
+  let added = 0, failed = [];
+  for (const file of fileList) {
+    try {
+      const canvas = await fileToCanvas(file);
+      addCanvasToQueue(canvas, t('s5.unitName.upload', file.name, canvas.width, canvas.height));
+      added++;
+    } catch (e) {
+      failed.push(file.name);
+    }
+  }
+  if (added > 0) redistributePieceCounts();
+  renderQueue();
+  updateLayoutInfo();
+  if (failed.length) alert(t('al.fileLoadFail', failed.join('\n')));
+}
+
+$('queue-upload').addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.onchange = () => uploadFilesToQueue(input.files);
+  input.click();
+});
+
+// 拖拽到队列空提示框 / 队列列表上时也能加入
+['queue-empty-hint', 'queue-list'].forEach(id => {
+  const el = $(id);
+  if (!el) return;
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    el.style.outline = '2px dashed #0071e3';
+    el.style.outlineOffset = '2px';
+  });
+  el.addEventListener('dragleave', () => {
+    el.style.outline = '';
+  });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.style.outline = '';
+    uploadFilesToQueue(e.dataTransfer.files);
+  });
+});
+
+function redistributePieceCounts() {
+  if (state.pieces.length === 0) return;
+  const size = getPieceSize();
+  if (!Array.isArray(size)) return; // mismatch 或还没尺寸
+  const dpi = getCurrentDpi();
+  const layout = calcLayout(size[0], size[1], dpi);
+  if (layout.total < 1) return;
+  // 超出浏览器画布上限就不动数量，让 updateLayoutInfo 提示用户降 DPI
+  const maxDim = Math.max(layout.paperW, layout.paperH);
+  if (maxDim > MAX_CANVAS_DIM || layout.paperW * layout.paperH > MAX_CANVAS_PX) return;
+
+  const each = Math.max(1, Math.floor(layout.total / state.pieces.length));
+  state.pieces.forEach(p => { p.count = each; });
+}
+
+function renderQueue() {
+  const wrap = $('queue-list');
+  wrap.innerHTML = '';
+  const total = state.pieces.reduce((s, p) => s + p.count, 0);
+  if (state.pieces.length === 0) {
+    $('queue-summary').textContent = t('s5.queueEmpty');
+    $('queue-empty-hint').style.display = '';
+    $('queue-clear').style.display = 'none';
+  } else {
+    $('queue-summary').textContent = t('s5.queueSummary', state.pieces.length, total);
+    $('queue-empty-hint').style.display = 'none';
+    $('queue-clear').style.display = '';
+  }
+  state.pieces.forEach((p, idx) => {
+    const item = document.createElement('div');
+    item.className = 'queue-item';
+    item.innerHTML = `
+      <img class="queue-thumb" src="${p.thumb}" alt="">
+      <div class="queue-name" title="${p.name}">${p.name}</div>
+      <div class="queue-count">
+        <button class="qty-btn" data-act="minus">−</button>
+        <input type="number" min="0" max="999" value="${p.count}">
+        <button class="qty-btn" data-act="plus">+</button>
+      </div>
+      <button class="queue-remove" title="${t('qi.delete')}">×</button>
+    `;
+    item.querySelector('[data-act="minus"]').onclick = () => {
+      p.count = Math.max(0, p.count - 1);
+      renderQueue();
+      updateLayoutInfo();
+    };
+    item.querySelector('[data-act="plus"]').onclick = () => {
+      p.count++;
+      renderQueue();
+      updateLayoutInfo();
+    };
+    item.querySelector('input').onchange = e => {
+      p.count = Math.max(0, Math.min(999, parseInt(e.target.value) || 0));
+      renderQueue();
+      updateLayoutInfo();
+    };
+    item.querySelector('.queue-remove').onclick = () => {
+      state.pieces.splice(idx, 1);
+      renderQueue();
+      updateLayoutInfo();
+    };
+    wrap.appendChild(item);
+  });
+}
+
+// 获取拼版用的单张尺寸 → null 表示"还没东西"，'mismatch' 表示"队列里尺寸不一致"
+function getPieceSize() {
+  if (state.pieces.length > 0) {
+    const w = state.pieces[0].w, h = state.pieces[0].h;
+    for (const p of state.pieces) {
+      if (p.w !== w || p.h !== h) return 'mismatch';
+    }
+    return [w, h];
+  }
+  if (state.outputCanvas) return [state.outputCanvas.width, state.outputCanvas.height];
+  return null;
+}
+
+function getQueueTotal() {
+  return state.pieces.reduce((s, p) => s + p.count, 0);
+}
+
+$('add-to-queue').addEventListener('click', addToQueue);
+$('queue-clear').addEventListener('click', () => {
+  if (state.pieces.length && confirm(t('al.clearQueue'))) {
+    state.pieces = [];
+    renderQueue();
+    updateLayoutInfo();
+  }
+});
+
+//======================== 排版信息 ========================
+function updateLayoutInfo() {
+  const info = $('layout-info');
+  const size = getPieceSize();
+  if (size === null) {
+    info.innerHTML = t('in.layoutNoQueue');
+    $('layout-generate').disabled = true;
+    return;
+  }
+  if (size === 'mismatch') {
+    info.innerHTML = '<div class="warn">' + t('in.layoutMismatch') + '</div>';
+    $('layout-generate').disabled = true;
+    return;
+  }
+  const [pieceW, pieceH] = size;
+  const dpi = getCurrentDpi();
+  const layout = calcLayout(pieceW, pieceH, dpi);
+  if (layout.total < 1) {
+    info.innerHTML = '<div class="warn">' + t('in.layoutNoFit') + '</div>';
+    $('layout-generate').disabled = true;
+    return;
+  }
+
+  const orientLabel = layout.paperW < layout.paperH ? t('in.orient.portrait') : t('in.orient.landscape');
+  const fileMB = (layout.paperW * layout.paperH * 4 / 1024 / 1024).toFixed(0);
+  const maxDim = Math.max(layout.paperW, layout.paperH);
+  const totalPx = layout.paperW * layout.paperH;
+  const tooBig = maxDim > MAX_CANVAS_DIM || totalPx > MAX_CANVAS_PX;
+
+  let warn = '';
+  if (tooBig) {
+    const factor = Math.min(MAX_CANVAS_DIM / maxDim, Math.sqrt(MAX_CANVAS_PX / totalPx));
+    const safeDpi = Math.floor(dpi * factor / 50) * 50;
+    warn = `<div class="warn">${t('in.tooBig', MAX_CANVAS_DIM, safeDpi || 300)}</div>`;
+  } else if (fileMB > 600) {
+    warn = `<div class="warn">${t('in.heavy', fileMB)}</div>`;
+  }
+
+  const useQueue = state.pieces.length > 0;
+  const queueTotal = getQueueTotal();
+  let modeNote = '';
+  if (useQueue) {
+    if (queueTotal === 0) {
+      modeNote = '<div class="warn">' + t('in.queueZero') + '</div>';
+    } else if (queueTotal > layout.total) {
+      modeNote = `<div class="warn">${t('in.queueOver', queueTotal, layout.total, queueTotal - layout.total)}</div>`;
+    } else if (queueTotal < layout.total) {
+      modeNote = `<div style="color:#6e6e73">${t('in.queueUnder', queueTotal, layout.total)}</div>`;
+    } else {
+      modeNote = `<div class="ok">${t('in.queueExact', queueTotal, layout.total)}</div>`;
+    }
+  } else {
+    modeNote = `<div style="color:#6e6e73">${t('in.singleMode', layout.total)}</div>`;
+  }
+
+  info.innerHTML = `
+    ${t('in.layoutCapacity', layout.cols, layout.rows, layout.total, orientLabel, layout.paperW, layout.paperH, dpi, fileMB)}
+    <br>${modeNote}
+    ${warn ? '<br>' + warn : ''}
+  `;
+  $('layout-generate').disabled = tooBig || (useQueue && queueTotal === 0);
+}
+
+['paper-size', 'paper-orient', 'paper-margin', 'paper-spacing', 'paper-w', 'paper-h'].forEach(id => {
+  $(id).addEventListener('input', updateLayoutInfo);
+  $(id).addEventListener('change', updateLayoutInfo);
+});
+$('paper-size').addEventListener('change', () => {
+  $('paper-custom-wrap').style.display = $('paper-size').value === 'custom' ? '' : 'none';
+});
+
+async function generateLayout() {
+  const size = getPieceSize();
+  if (size === null) { alert(t('al.genFirst')); return; }
+  if (size === 'mismatch') { alert(t('al.sizeMismatch')); return; }
+  const [pieceW, pieceH] = size;
+  const dpi = getCurrentDpi();
+  const layout = calcLayout(pieceW, pieceH, dpi);
+  if (layout.total < 1) return;
+
+  // 防止超出浏览器 canvas 上限
+  const maxDim = Math.max(layout.paperW, layout.paperH);
+  if (maxDim > MAX_CANVAS_DIM || layout.paperW * layout.paperH > MAX_CANVAS_PX) {
+    alert(t('al.tooBig', layout.paperW, layout.paperH));
+    return;
+  }
+
+  // 构造序列：队列模式按队列展开，否则单张填满
+  const sequence = []; // [{canvas, pieceIdx}]
+  if (state.pieces.length > 0) {
+    state.pieces.forEach((p, idx) => {
+      for (let i = 0; i < p.count; i++) sequence.push({ canvas: p.canvas, pieceIdx: idx });
+    });
+  } else if (state.outputCanvas) {
+    for (let i = 0; i < layout.total; i++) sequence.push({ canvas: state.outputCanvas, pieceIdx: -1 });
+  }
+  if (sequence.length === 0) { alert(t('al.noPiece')); return; }
+  // 多余的截掉
+  if (sequence.length > layout.total) sequence.length = layout.total;
+
+  $('layout-generate').disabled = true;
+  $('layout-generate').textContent = '生成中...';
+  await new Promise(r => setTimeout(r, 30));
+
+  try {
+    const spacing_mm = parseFloat($('paper-spacing').value) || 0;
+    const spacing_px = Math.round(spacing_mm * dpi / 25.4);
+
+    const out = document.createElement('canvas');
+    out.width = layout.paperW;
+    out.height = layout.paperH;
+    if (out.width !== layout.paperW || out.height !== layout.paperH) {
+      throw new Error(t('al.canvasLimited', out.width, out.height));
+    }
+    const ctx = out.getContext('2d');
+
+    const transparent = $('bg-transparent').checked;
+    if (!transparent) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, out.width, out.height);
+    }
+
+    const gridW = layout.cols * pieceW + (layout.cols - 1) * spacing_px;
+    const gridH = layout.rows * pieceH + (layout.rows - 1) * spacing_px;
+    const startX = Math.round((layout.paperW - gridW) / 2);
+    const startY = Math.round((layout.paperH - gridH) / 2);
+
+    state.placements = [];
+    for (let i = 0; i < sequence.length; i++) {
+      const r = Math.floor(i / layout.cols);
+      const c = i % layout.cols;
+      const x = startX + c * (pieceW + spacing_px);
+      const y = startY + r * (pieceH + spacing_px);
+      ctx.drawImage(sequence[i].canvas, x, y);
+      state.placements.push({ pieceIdx: sequence[i].pieceIdx, x, y, w: pieceW, h: pieceH });
+    }
+
+    const blob = await new Promise((res, rej) => out.toBlob(b => b ? res(b) : rej(new Error(t('al.toBlobNull'))), 'image/png'));
+    state.layoutBlob = await injectPhysChunk(blob, dpi);
+    state.layoutCanvas = out;
+
+    const pv = $('layout-canvas');
+    pv.width = out.width;
+    pv.height = out.height;
+    pv.getContext('2d').drawImage(out, 0, 0);
+    $('layout-empty').style.display = 'none';
+    pv.style.display = 'block';
+    // 队列模式开放点击删除
+    pv.classList.toggle('clickable', state.pieces.length > 0);
+    pv.title = state.pieces.length > 0 ? t('tt.layoutClickRemove') : '';
+    $('layout-download').disabled = false;
+  } catch (e) {
+    alert(t('al.layoutFail', e.message));
+  } finally {
+    $('layout-generate').disabled = false;
+    $('layout-generate').textContent = '生成排版图';
+  }
+}
+
+// 在预览图上点击删除某一张
+$('layout-canvas').addEventListener('click', e => {
+  if (state.pieces.length === 0 || !state.placements.length) return;
+  const cv = e.currentTarget;
+  const rect = cv.getBoundingClientRect();
+  if (rect.width === 0) return;
+  const sx = cv.width / rect.width;
+  const sy = cv.height / rect.height;
+  const cx = (e.clientX - rect.left) * sx;
+  const cy = (e.clientY - rect.top) * sy;
+  for (const pl of state.placements) {
+    if (pl.pieceIdx >= 0 && cx >= pl.x && cx < pl.x + pl.w && cy >= pl.y && cy < pl.y + pl.h) {
+      const piece = state.pieces[pl.pieceIdx];
+      if (piece && piece.count > 0) {
+        piece.count--;
+        renderQueue();
+        updateLayoutInfo();
+        // 自动重排
+        generateLayout();
+      }
+      return;
+    }
+  }
+});
+
+$('layout-generate').addEventListener('click', generateLayout);
+$('layout-download').addEventListener('click', () => {
+  if (!state.layoutBlob) return;
+  const dpi = getCurrentDpi();
+  const paper = $('paper-size').value;
+  const size = getPieceSize();
+  const tag = state.pieces.length > 0 ? `mix${state.pieces.length}_${getQueueTotal()}pcs` : `single_${(size && Array.isArray(size)) ? '1pc' : ''}`;
+  const fname = `lenticular_layout_${paper}_${tag}_${dpi}DPI.png`;
+  downloadBlob(state.layoutBlob, fname);
+});
+
+//==============================================================
+// LPI 校准图生成
+//==============================================================
+function updateCalInfo() {
+  const center = parseFloat($('cal-center').value);
+  const step = parseFloat($('cal-step').value);
+  const count = parseInt($('cal-count').value);
+  const dpi = parseInt($('cal-dpi').value);
+  const w = parseFloat($('cal-w').value);
+  const h = parseFloat($('cal-h').value);
+  const minLpi = center - (count - 1) / 2 * step;
+  const maxLpi = center + (count - 1) / 2 * step;
+  $('cal-info').innerHTML = t('in.calRange',
+    minLpi.toFixed(2), maxLpi.toFixed(2), step, count,
+    pxFromCm(w, dpi), pxFromCm(h, dpi), w, h, dpi);
+}
+['cal-center', 'cal-step', 'cal-count', 'cal-dpi', 'cal-w', 'cal-h', 'cal-orientation'].forEach(id => {
+  $(id).addEventListener('input', updateCalInfo);
+});
+
+async function generateCalibration() {
+  const center = parseFloat($('cal-center').value);
+  const step = parseFloat($('cal-step').value);
+  const count = parseInt($('cal-count').value);
+  const dpi = parseInt($('cal-dpi').value);
+  const wcm = parseFloat($('cal-w').value);
+  const hcm = parseFloat($('cal-h').value);
+  const orient = $('cal-orientation').value;
+  const W = pxFromCm(wcm, dpi);
+  const H = pxFromCm(hcm, dpi);
+
+  $('cal-generate').disabled = true;
+  await new Promise(r => setTimeout(r, 20));
+
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, W, H);
+
+  // 标签区域占 0.6 cm
+  const labelPx = Math.round(0.6 * dpi / 2.54);
+  const fontPx = Math.max(10, Math.floor(labelPx * 0.5));
+
+  if (orient === 'vertical') {
+    // 竖向：行从上到下排列（每行不同 LPI，条纹竖直）
+    const patternW = W - labelPx;
+    const bandH = Math.floor(H / count);
+    const imgData = ctx.getImageData(0, 0, patternW, H);
+    for (let i = 0; i < count; i++) {
+      const lpi = center + (i - (count - 1) / 2) * step;
+      const pitch = dpi / lpi;
+      const y0 = i * bandH;
+      const y1 = (i === count - 1) ? H : (i + 1) * bandH;
+      // 预计算每列是黑还是白
+      const colBlack = new Uint8Array(patternW);
+      for (let x = 0; x < patternW; x++) {
+        const phase = (x % pitch) / pitch;
+        colBlack[x] = phase < 0.5 ? 1 : 0;
+      }
+      for (let y = y0; y < y1; y++) {
+        for (let x = 0; x < patternW; x++) {
+          if (colBlack[x]) {
+            const o = (y * patternW + x) * 4;
+            imgData.data[o] = 0; imgData.data[o + 1] = 0; imgData.data[o + 2] = 0;
+          }
+        }
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    // 标签
+    ctx.fillStyle = 'black';
+    ctx.font = `${fontPx}px sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < count; i++) {
+      const lpi = center + (i - (count - 1) / 2) * step;
+      const y = i * bandH + bandH / 2;
+      // 在标签区画白底
+      ctx.fillStyle = 'white';
+      ctx.fillRect(patternW, i * bandH, labelPx, bandH);
+      ctx.fillStyle = 'black';
+      ctx.fillText(lpi.toFixed(2), patternW + labelPx / 2, y);
+    }
+    // 行间细线
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < count; i++) {
+      const y = i * bandH;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+  } else {
+    // 横向：列从左到右排列（每列不同 LPI，条纹水平）
+    const patternH = H - labelPx;
+    const bandW = Math.floor(W / count);
+    const imgData = ctx.getImageData(0, 0, W, patternH);
+    for (let i = 0; i < count; i++) {
+      const lpi = center + (i - (count - 1) / 2) * step;
+      const pitch = dpi / lpi;
+      const x0 = i * bandW;
+      const x1 = (i === count - 1) ? W : (i + 1) * bandW;
+      const rowBlack = new Uint8Array(patternH);
+      for (let y = 0; y < patternH; y++) {
+        const phase = (y % pitch) / pitch;
+        rowBlack[y] = phase < 0.5 ? 1 : 0;
+      }
+      for (let y = 0; y < patternH; y++) {
+        if (rowBlack[y]) {
+          for (let x = x0; x < x1; x++) {
+            const o = (y * W + x) * 4;
+            imgData.data[o] = 0; imgData.data[o + 1] = 0; imgData.data[o + 2] = 0;
+          }
+        }
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    ctx.fillStyle = 'black';
+    ctx.font = `${fontPx}px sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < count; i++) {
+      const lpi = center + (i - (count - 1) / 2) * step;
+      const x = i * bandW + bandW / 2;
+      ctx.fillStyle = 'white';
+      ctx.fillRect(i * bandW, patternH, bandW, labelPx);
+      ctx.fillStyle = 'black';
+      ctx.fillText(lpi.toFixed(2), x, patternH + labelPx / 2);
+    }
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < count; i++) {
+      const x = i * bandW;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+  }
+
+  // 显示
+  const pv = $('cal-canvas');
+  pv.width = W; pv.height = H;
+  pv.getContext('2d').drawImage(c, 0, 0);
+  $('cal-empty').style.display = 'none';
+  pv.style.display = 'block';
+
+  // 转 blob
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  state.calBlob = await injectPhysChunk(blob, dpi);
+  state.calCanvas = c;
+  $('cal-download').disabled = false;
+  $('cal-generate').disabled = false;
+}
+
+$('cal-generate').addEventListener('click', generateCalibration);
+$('cal-download').addEventListener('click', () => {
+  if (!state.calBlob) return;
+  const center = parseFloat($('cal-center').value);
+  const step = parseFloat($('cal-step').value);
+  const count = parseInt($('cal-count').value);
+  const dpi = parseInt($('cal-dpi').value);
+  const fname = `calibration_${center}_step${step}_${count}rows_${dpi}DPI.png`;
+  downloadBlob(state.calBlob, fname);
+});
+
+//==============================================================
+// 初始化
+//==============================================================
+updateInfo();
+updateCalInfo();
+renderQueue();
+updateLayoutInfo();
+$('preview-canvas').style.display = 'none';
+$('cal-canvas').style.display = 'none';
+$('layout-canvas').style.display = 'none';
+
+// 语言初始化（必须在 state 等基础变量声明之后执行）
+(function initLang() {
+  const saved = (() => { try { return localStorage.getItem('lenticular_lang'); } catch (e) { return null; } })();
+  if (saved && translations[saved]) {
+    applyLanguage(saved);
+  } else {
+    // 弹出选择器
+    setTimeout(() => $('lang-picker').classList.add('active'), 0);
+  }
+  // 选择按钮
+  document.querySelectorAll('#lang-picker .lang-list button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyLanguage(btn.dataset.lang);
+      $('lang-picker').classList.remove('active');
+    });
+  });
+  // 顶部切换器
+  $('lang-switcher').addEventListener('change', e => applyLanguage(e.target.value));
+})();
+</script>
+</body>
+</html>
